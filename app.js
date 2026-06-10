@@ -907,8 +907,11 @@ function wireTaskEdit(u) {
 }
 
 /* --- Pano (dashboard): özet + geciken görevler + bugün --- */
-function statCard(label, value, kind) {
-  return `<div class="stat-card ${kind}"><div class="stat-val">${value}</div><div class="stat-label">${label}</div></div>`;
+function statCard(label, value, kind, icon) {
+  return `<div class="stat-card ${kind}">
+    <div class="stat-icon">${icon || ""}</div>
+    <div class="stat-body"><div class="stat-val">${value}</div><div class="stat-label">${label}</div></div>
+  </div>`;
 }
 
 // Kırmızı geciken görevler panosu. forStaff=true ise "Şimdi tamamla" butonu çıkar.
@@ -973,13 +976,13 @@ function mgrDashboard(u) {
   return `
     ${resolvedBanner(u)}
     ${leaveBanner(u)}
-    <div class="section-title">📊 ${dateStr}</div>
+    <div class="dash-date">📅 ${dateStr}</div>
     <div class="stats">
-      ${statCard("Bugün Aktif", active.length, "blue")}
-      ${statCard("Bugün Biten", done.length, "green")}
-      ${statCard("Geciken", missed.length, "red")}
-      ${statCard("Açık Talep", openRep, "amber")}
-      ${statCard("Toplam Görev", all.length, "gray")}
+      ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
+      ${statCard("Bugün Biten", done.length, "green", "✅")}
+      ${statCard("Geciken", missed.length, "red", "⏰")}
+      ${statCard("Açık Talep", openRep, "amber", "📨")}
+      ${statCard("Toplam Görev", all.length, "gray", "📋")}
     </div>
 
     ${assignedSection}
