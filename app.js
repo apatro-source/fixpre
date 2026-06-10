@@ -81,14 +81,10 @@ function migrate(db) {
     t.completions = comp;
   });
 
-  // Rol/sahiplik alanlarını 3 katmanlı yapıya normalize et
+  // Rol/sahiplik alanlarını normalize et (ownerId varsa KORUNUR — org kimliği bozulmasın)
   (db.users || []).forEach((u) => {
-    if (u.role === "yonetici") {
-      u.ownerId = u.id;                       // yönetici = organizasyon sahibi
-    } else {
-      if (!u.ownerId) u.ownerId = u.managerId || null;  // eski managerId -> ownerId
-      if (u.role === "personel" && u.chefId === undefined) u.chefId = null;
-    }
+    if (!u.ownerId) u.ownerId = (u.role === "yonetici") ? u.id : (u.managerId || null);
+    if (u.role === "personel" && u.chefId === undefined) u.chefId = null;
     if (!u.venueIds) u.venueIds = [];
     if (!u.lang) u.lang = "tr";
   });
@@ -103,25 +99,52 @@ function migrate(db) {
 
 let DB = loadDB();
 
-/* ---------------- Oturum ---------------- */
+/* ---------------- Oturum (güvenli: token + hash) ---------------- */
+const TOKEN_KEY = "fixpre_token";
+const UID_KEY = "fixpre_uid";
+
+function authToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [] }; }
 
 function currentUser() {
-  const id = localStorage.getItem(SESSION_KEY);
+  const id = localStorage.getItem(UID_KEY);
   if (!id) return null;
   return DB.users.find((u) => u.id === id) || null;
 }
 
-function login(email, password) {
-  const u = DB.users.find(
-    (x) => x.email.toLowerCase() === email.toLowerCase().trim() && x.password === password
-  );
-  if (!u) return false;
-  localStorage.setItem(SESSION_KEY, u.id);
-  return true;
+// /api/auth çağrısı (token varsa ekler)
+async function authCall(payload) {
+  const r = await fetch("/api/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken() },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("http_" + r.status));
+  return j;
+}
+
+async function doLogin(email, password) {
+  const j = await authCall({ action: "login", email: (email || "").trim(), password });
+  localStorage.setItem(TOKEN_KEY, j.token);
+  localStorage.setItem(UID_KEY, j.userId);
+  DB = migrate(j.data || emptyDB());
+  saveLocal(DB);
+}
+
+async function doRegister(name, email, password) {
+  const j = await authCall({ action: "register", name, email: (email || "").trim(), password });
+  localStorage.setItem(TOKEN_KEY, j.token);
+  localStorage.setItem(UID_KEY, j.userId);
+  DB = migrate(j.data || emptyDB());
+  saveLocal(DB);
 }
 
 function logout() {
-  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(UID_KEY);
+  DB = emptyDB();
+  authMode = "login";
   render();
 }
 
@@ -470,20 +493,28 @@ function mountProfile(u) {
   if (pushBtn) pushBtn.onclick = () => ensurePushSubscribed(u, true);
   document.getElementById("pf_cancel").onclick = close;
   document.getElementById("pf_overlay").onclick = (e) => { if (e.target.id === "pf_overlay") close(); };
-  document.getElementById("pf_save").onclick = () => {
+  document.getElementById("pf_save").onclick = async () => {
     const name = document.getElementById("pf_name").value.trim();
     const lang = document.getElementById("pf_lang").value;
     const pw = document.getElementById("pf_pw").value;
     const pw2 = document.getElementById("pf_pw2").value;
     const err = document.getElementById("pf_err");
     if (!name) { err.textContent = "Ad gerekli."; return; }
+    if (pw && pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
     if (pw && pw !== pw2) { err.textContent = "Şifreler uyuşmuyor."; return; }
-    u.name = name;
-    u.lang = lang;
-    if (pw) u.password = pw;
-    saveDB(DB);
-    showProfile = false;
-    render();
+    const saveBtn = document.getElementById("pf_save");
+    saveBtn.disabled = true; err.textContent = "";
+    try {
+      if (pw) { await authCall({ action: "setPassword", password: pw }); } // kendi şifresi
+      u.name = name;
+      u.lang = lang;
+      saveDB(DB);
+      showProfile = false;
+      render();
+    } catch (e) {
+      saveBtn.disabled = false;
+      err.textContent = "Kaydedilemedi (bağlantı?).";
+    }
   };
 }
 
@@ -544,15 +575,21 @@ function renderLogin() {
   });
 
   if (isLogin) {
-    const tryLogin = () => {
+    const tryLogin = async () => {
       const email = document.getElementById("email").value;
       const pw = document.getElementById("password").value;
-      if (login(email, pw)) {
-        activeTab = "bugun";
-        staffTab = "bugun";
+      const err = document.getElementById("loginErr");
+      const btn = document.getElementById("loginBtn");
+      err.textContent = ""; btn.disabled = true;
+      try {
+        await doLogin(email, pw);
+        activeTab = "bugun"; staffTab = "bugun";
         render();
-      } else {
-        document.getElementById("loginErr").textContent = "E-posta veya şifre hatalı.";
+      } catch (e) {
+        btn.disabled = false;
+        err.textContent = (String(e.message) === "bad_credentials")
+          ? "E-posta veya şifre hatalı."
+          : "Giriş yapılamadı. Bağlantını kontrol et.";
       }
     };
     document.getElementById("loginBtn").onclick = tryLogin;
@@ -560,7 +597,7 @@ function renderLogin() {
       if (e.key === "Enter") tryLogin();
     });
   } else {
-    const tryRegister = () => {
+    const tryRegister = async () => {
       const name = document.getElementById("r_name").value.trim();
       const email = document.getElementById("r_email").value.trim();
       const pw = document.getElementById("r_pw").value;
@@ -569,19 +606,18 @@ function renderLogin() {
       if (!name || !email || !pw) { err.textContent = "Lütfen tüm alanları doldurun."; return; }
       if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
       if (pw !== pw2) { err.textContent = "Şifreler uyuşmuyor."; return; }
-      if (DB.users.some((x) => x.email.toLowerCase() === email.toLowerCase())) {
-        err.textContent = "Bu e-posta zaten kayıtlı."; return;
+      const btn = document.getElementById("registerBtn");
+      err.textContent = ""; btn.disabled = true;
+      try {
+        await doRegister(name, email, pw);
+        activeTab = "bugun"; staffTab = "bugun";
+        render();
+      } catch (e) {
+        btn.disabled = false;
+        err.textContent = (String(e.message) === "email_taken")
+          ? "Bu e-posta zaten kayıtlı."
+          : "Kayıt yapılamadı. Bağlantını kontrol et.";
       }
-      const id = uid();
-      DB.users.push({
-        id, role: "yonetici", name, email, password: pw,
-        ownerId: id, managerId: null, venueIds: [], lang: "tr",
-      });
-      saveDB(DB);
-      localStorage.setItem(SESSION_KEY, id);
-      activeTab = "bugun";
-      staffTab = "bugun";
-      render();
     };
     document.getElementById("registerBtn").onclick = tryRegister;
     document.getElementById("r_pw2").addEventListener("keydown", (e) => {
@@ -1268,7 +1304,7 @@ function staffEditForm(s, venues) {
         <div class="field"><label>Ad Soyad</label><input id="e_name" value="${esc(s.name)}" /></div>
         <div class="field"><label>E-posta</label><input id="e_email" value="${esc(s.email)}" /></div>
       </div>
-      <div class="field"><label>Şifre</label><input id="e_pw" value="${esc(s.password)}" /></div>
+      <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="e_pw" type="text" placeholder="••••" /></div>
       <div class="field">
         <label>Görevli olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, s.venueIds, "e_venue")}</div>
@@ -1299,7 +1335,7 @@ function mgrStaff(u) {
       return `<div class="list-item">
         <div>
           <div class="title">${esc(s.name)}</div>
-          <div class="meta">${esc(s.email)} · şifre: ${esc(s.password)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""}${chefInfo}</div>
+          <div class="meta">${esc(s.email)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""}${chefInfo}</div>
         </div>
         <div class="item-actions">
           <button class="btn-ghost btn-sm" data-edit-staff="${s.id}">⚙️ Ayarlar</button>
@@ -1315,31 +1351,34 @@ function wireMgrStaff(u) {
     cb.onchange = () => cb.closest(".check-pill").classList.toggle("sel", cb.checked);
   });
 
-  // Yeni personel ekle
+  // Yeni personel ekle (hesap sunucuda hash'li oluşturulur)
   const addBtn = document.getElementById("s_add");
-  if (addBtn) addBtn.onclick = () => {
+  if (addBtn) addBtn.onclick = async () => {
     const name = document.getElementById("s_name").value.trim();
     const email = document.getElementById("s_email").value.trim();
     const pw = document.getElementById("s_pw").value.trim();
     const venueIds = Array.from(document.querySelectorAll(".s_venue:checked")).map((c) => c.value);
     const err = document.getElementById("s_err");
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
-    if (DB.users.some((x) => x.email.toLowerCase() === email.toLowerCase())) {
-      err.textContent = "Bu e-posta zaten kullanımda."; return;
+    if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    addBtn.disabled = true; err.textContent = "";
+    try {
+      const j = await authCall({ action: "createUser", role: "personel", name, email, password: pw });
+      DB.users.push({
+        id: j.userId, role: "personel", name, email,
+        ownerId: ownerIdOf(u), chefId: u.role === "sef" ? u.id : null, venueIds, lang: "tr",
+      });
+      saveDB(DB);
+      render();
+    } catch (e) {
+      addBtn.disabled = false;
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Eklenemedi (bağlantı?).";
     }
-    DB.users.push({
-      id: uid(), role: "personel", name, email, password: pw,
-      ownerId: ownerIdOf(u),
-      chefId: u.role === "sef" ? u.id : null,
-      venueIds,
-    });
-    saveDB(DB);
-    render();
   };
 
   // Personel düzenle - kaydet
   const saveBtn = document.getElementById("e_save");
-  if (saveBtn) saveBtn.onclick = () => {
+  if (saveBtn) saveBtn.onclick = async () => {
     const s = userById(editingStaff);
     if (!s) { editingStaff = null; render(); return; }
     const name = document.getElementById("e_name").value.trim();
@@ -1347,23 +1386,30 @@ function wireMgrStaff(u) {
     const pw = document.getElementById("e_pw").value.trim();
     const venueIds = Array.from(document.querySelectorAll(".e_venue:checked")).map((c) => c.value);
     const err = document.getElementById("e_err");
-    if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
-    if (DB.users.some((x) => x.id !== s.id && x.email.toLowerCase() === email.toLowerCase())) {
-      err.textContent = "Bu e-posta zaten kullanımda."; return;
+    if (!name || !email) { err.textContent = "Ad ve e-posta gerekli."; return; }
+    if (pw && pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    saveBtn.disabled = true; err.textContent = "";
+    try {
+      if (email.toLowerCase() !== (s.email || "").toLowerCase()) {
+        await authCall({ action: "updateEmail", userId: s.id, email });
+      }
+      if (pw) { await authCall({ action: "setPassword", userId: s.id, password: pw }); }
+      const removedVenues = (s.venueIds || []).filter((v) => !venueIds.includes(v));
+      if (removedVenues.length) {
+        DB.tasks.forEach((t) => {
+          if (t.venueId && removedVenues.includes(t.venueId)) {
+            t.assignedUserIds = t.assignedUserIds.filter((a) => a !== s.id);
+          }
+        });
+      }
+      s.name = name; s.email = email; s.venueIds = venueIds;
+      saveDB(DB);
+      editingStaff = null;
+      render();
+    } catch (e) {
+      saveBtn.disabled = false;
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Kaydedilemedi (bağlantı?).";
     }
-    // Ayrıldığı mekanlara ait görevlerden bu personeli çıkar (mekan değişti)
-    const removedVenues = (s.venueIds || []).filter((v) => !venueIds.includes(v));
-    if (removedVenues.length) {
-      DB.tasks.forEach((t) => {
-        if (t.venueId && removedVenues.includes(t.venueId)) {
-          t.assignedUserIds = t.assignedUserIds.filter((a) => a !== s.id);
-        }
-      });
-    }
-    s.name = name; s.email = email; s.password = pw; s.venueIds = venueIds;
-    saveDB(DB);
-    editingStaff = null;
-    render();
   };
   const cancelBtn = document.getElementById("e_cancel");
   if (cancelBtn) cancelBtn.onclick = () => { editingStaff = null; render(); };
@@ -1375,13 +1421,12 @@ function wireMgrStaff(u) {
 
   // Personel sil
   document.querySelectorAll("[data-del-staff]").forEach((b) => {
-    b.onclick = () => {
+    b.onclick = async () => {
       if (!confirm("Bu personel silinsin mi? (Görev atamalarından da çıkarılır)")) return;
       const id = b.dataset.delStaff;
+      try { await authCall({ action: "deleteUser", userId: id }); } catch (e) { /* yine de yereldən çıkar */ }
       DB.users = DB.users.filter((x) => x.id !== id);
-      DB.tasks.forEach((t) => {
-        t.assignedUserIds = t.assignedUserIds.filter((a) => a !== id);
-      });
+      DB.tasks.forEach((t) => { t.assignedUserIds = t.assignedUserIds.filter((a) => a !== id); });
       if (editingStaff === id) editingStaff = null;
       saveDB(DB);
       render();
@@ -1566,7 +1611,7 @@ function chefEditForm(c, venues) {
         <div class="field"><label>Ad Soyad</label><input id="ce_name" value="${esc(c.name)}" /></div>
         <div class="field"><label>E-posta</label><input id="ce_email" value="${esc(c.email)}" /></div>
       </div>
-      <div class="field"><label>Şifre</label><input id="ce_pw" value="${esc(c.password)}" /></div>
+      <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="ce_pw" type="text" placeholder="••••" /></div>
       <div class="field">
         <label>Sorumlu olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, c.venueIds, "ce_venue")}</div>
@@ -1603,7 +1648,7 @@ function mgrChefs(u) {
       return `<div class="list-item venue-item" data-open-chef="${c.id}">
         <div>
           <div class="title">👔 ${esc(c.name)}</div>
-          <div class="meta">${esc(c.email)} · şifre: ${esc(c.password)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""} · ${pc} personel</div>
+          <div class="meta">${esc(c.email)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""} · ${pc} personel</div>
         </div>
         <div class="item-actions">
           <button class="btn-ghost btn-sm" data-edit-chef="${c.id}">⚙️ Ayarlar</button>
@@ -1652,44 +1697,54 @@ function wireMgrChefs(u) {
     cb.onchange = () => cb.closest(".check-pill").classList.toggle("sel", cb.checked);
   });
 
-  // Yeni şef ekle
+  // Yeni şef ekle (hesap sunucuda hash'li oluşturulur)
   const addBtn = document.getElementById("cf_add");
-  if (addBtn) addBtn.onclick = () => {
+  if (addBtn) addBtn.onclick = async () => {
     const name = document.getElementById("cf_name").value.trim();
     const email = document.getElementById("cf_email").value.trim();
     const pw = document.getElementById("cf_pw").value.trim();
-    const venueIds = Array.from(document.querySelectorAll(".cf_venue:checked")).map((c) => c.value);
+    const venueIds = Array.from(document.querySelectorAll(".cf_venue:checked")).map((el) => el.value);
     const err = document.getElementById("cf_err");
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
-    if (DB.users.some((x) => x.email.toLowerCase() === email.toLowerCase())) {
-      err.textContent = "Bu e-posta zaten kullanımda."; return;
+    if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    addBtn.disabled = true; err.textContent = "";
+    try {
+      const j = await authCall({ action: "createUser", role: "sef", name, email, password: pw });
+      DB.users.push({ id: j.userId, role: "sef", name, email, ownerId: owner, venueIds, lang: "tr" });
+      saveDB(DB);
+      render();
+    } catch (e) {
+      addBtn.disabled = false;
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Eklenemedi (bağlantı?).";
     }
-    DB.users.push({
-      id: uid(), role: "sef", name, email, password: pw,
-      ownerId: owner, venueIds,
-    });
-    saveDB(DB);
-    render();
   };
 
   // Şef düzenle - kaydet
   const saveBtn = document.getElementById("ce_save");
-  if (saveBtn) saveBtn.onclick = () => {
+  if (saveBtn) saveBtn.onclick = async () => {
     const c = userById(editingStaff);
     if (!c) { editingStaff = null; render(); return; }
     const name = document.getElementById("ce_name").value.trim();
     const email = document.getElementById("ce_email").value.trim();
     const pw = document.getElementById("ce_pw").value.trim();
-    const venueIds = Array.from(document.querySelectorAll(".ce_venue:checked")).map((c) => c.value);
+    const venueIds = Array.from(document.querySelectorAll(".ce_venue:checked")).map((el) => el.value);
     const err = document.getElementById("ce_err");
-    if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
-    if (DB.users.some((x) => x.id !== c.id && x.email.toLowerCase() === email.toLowerCase())) {
-      err.textContent = "Bu e-posta zaten kullanımda."; return;
+    if (!name || !email) { err.textContent = "Ad ve e-posta gerekli."; return; }
+    if (pw && pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    saveBtn.disabled = true; err.textContent = "";
+    try {
+      if (email.toLowerCase() !== (c.email || "").toLowerCase()) {
+        await authCall({ action: "updateEmail", userId: c.id, email });
+      }
+      if (pw) { await authCall({ action: "setPassword", userId: c.id, password: pw }); }
+      c.name = name; c.email = email; c.venueIds = venueIds;
+      saveDB(DB);
+      editingStaff = null;
+      render();
+    } catch (e) {
+      saveBtn.disabled = false;
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Kaydedilemedi (bağlantı?).";
     }
-    c.name = name; c.email = email; c.password = pw; c.venueIds = venueIds;
-    saveDB(DB);
-    editingStaff = null;
-    render();
   };
   const cancelBtn = document.getElementById("ce_cancel");
   if (cancelBtn) cancelBtn.onclick = () => { editingStaff = null; render(); };
@@ -1701,9 +1756,10 @@ function wireMgrChefs(u) {
 
   // Şef sil (personeli yöneticiye bağlanır, silinmez)
   document.querySelectorAll("[data-del-chef]").forEach((b) => {
-    b.onclick = () => {
+    b.onclick = async () => {
       const id = b.dataset.delChef;
       if (!confirm("Bu şef silinsin mi? (Personeli silinmez, doğrudan yöneticiye bağlanır)")) return;
+      try { await authCall({ action: "deleteUser", userId: id }); } catch (e) { /* yine de yereldən çıkar */ }
       DB.users = DB.users.filter((x) => x.id !== id);
       DB.users.forEach((x) => { if (x.chefId === id) x.chefId = null; });
       if (editingStaff === id) editingStaff = null;
@@ -2430,41 +2486,38 @@ function staffTaskCard(t, u, extra = "") {
    BULUT SENKRON (Neon üzerinden) — yalnızca sunucuda (https) aktif
    Yerelde (file://) localStorage modunda çalışır.
    ============================================================ */
-const API_URL = "/api/state";
-const CLOUD_KEY = "fixpre2026";   // Vercel'deki FIXPRE_KEY ile aynı olmalı
+const CLOUD_KEY = "fixpre2026";   // /api/push için (Vercel FIXPRE_KEY ile aynı)
 let cloudEnabled = false;
 let lastAppliedAt = null;
 let pushTimer = null;
 let pushing = false;
 
-function apiKey() { return CLOUD_KEY; } // anahtar koda gömülü; kullanıcıya sorulmaz
-
-async function apiGet() {
-  const r = await fetch(API_URL, { headers: { "x-fixpre-key": apiKey() } });
-  if (r.status === 401) throw new Error("auth");
+async function dataGet() {
+  const r = await fetch("/api/data", { headers: { "Authorization": "Bearer " + authToken() } });
+  if (r.status === 401) throw new Error("401");
   if (!r.ok) throw new Error("get " + r.status);
   return r.json();
 }
-async function apiPut(data) {
-  const r = await fetch(API_URL, {
+async function dataPut(data) {
+  const r = await fetch("/api/data", {
     method: "PUT",
-    headers: { "Content-Type": "application/json", "x-fixpre-key": apiKey() },
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken() },
     body: JSON.stringify({ data }),
   });
-  if (r.status === 401) throw new Error("auth");
+  if (r.status === 401) throw new Error("401");
   if (!r.ok) throw new Error("put " + r.status);
   return r.json();
 }
 
-// Değişiklikleri (kısa gecikmeyle) sunucuya yaz
+// Değişiklikleri (kısa gecikmeyle) organizasyonun satırına yaz
 function cloudPush(db) {
-  if (!cloudEnabled) return;
+  if (!cloudEnabled || !authToken()) return;
   clearTimeout(pushTimer);
   const snapshot = JSON.stringify(db);
   pushTimer = setTimeout(async () => {
     pushing = true;
     try {
-      const res = await apiPut(JSON.parse(snapshot));
+      const res = await dataPut(JSON.parse(snapshot));
       lastAppliedAt = res.updatedAt;
     } catch (e) { /* sessiz; localStorage yedeği var */ }
     finally { pushing = false; }
@@ -2473,32 +2526,28 @@ function cloudPush(db) {
 
 async function cloudBootstrap() {
   cloudEnabled = true;
-  try {
-    const res = await apiGet();
-    if (res && res.data) {
-      DB = migrate(res.data);
-      saveLocal(DB);
-      lastAppliedAt = res.updatedAt;
-    } else {
-      // sunucu boş: mevcut veriyi (ör. tohum) yükle
-      const put = await apiPut(DB);
-      lastAppliedAt = put.updatedAt;
+  if (authToken()) {
+    try {
+      const res = await dataGet();
+      if (res && res.data) { DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt; }
+    } catch (e) {
+      if (String(e.message) === "401") { // token geçersiz/süresi dolmuş -> çıkış
+        localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(UID_KEY); DB = emptyDB();
+      }
     }
-  } catch (e) {
-    cloudEnabled = false; // API erişilemiyor -> yerel veriyle devam
   }
-  render();                 // her durumda ekranı çiz (boş kalmasın)
-  if (cloudEnabled) startPolling();
+  render();         // giriş yoksa login ekranı
+  startPolling();
 }
 
 // Başkalarının değişikliklerini periyodik çek (düzenleme sırasında dokunma)
 function startPolling() {
   setInterval(async () => {
-    if (pushing || showProfile || editingTask || editingStaff || sharingTask) return;
+    if (!authToken() || pushing || showProfile || editingTask || editingStaff || sharingTask) return;
     const ae = document.activeElement;
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     try {
-      const res = await apiGet();
+      const res = await dataGet();
       if (res && res.data && res.updatedAt && res.updatedAt !== lastAppliedAt) {
         DB = migrate(res.data);
         saveLocal(DB);
