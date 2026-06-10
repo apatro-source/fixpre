@@ -1,5 +1,5 @@
 /* Fixpre Service Worker — uygulama kabuğunu önbelleğe alır, API'yi ağdan çeker */
-const CACHE = "fixpre-v1";
+const CACHE = "fixpre-v2";
 const ASSETS = [
   "/", "/index.html", "/app.js", "/style.css", "/i18n.js",
   "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png",
@@ -16,6 +16,32 @@ self.addEventListener("activate", (e) => {
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+// Push bildirimi geldiğinde göster
+self.addEventListener("push", (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = {}; }
+  const title = data.title || "Fixpre";
+  const options = {
+    body: data.body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: data.url || "/" },
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Bildirime tıklayınca uygulamayı aç/öne getir
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) { if ("focus" in w) return w.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
   );
 });
 

@@ -424,6 +424,8 @@ function render() {
   if (showProfile) mountProfile(u);
   translateUI();
   scrollActiveTabIntoView();
+  // izin daha önce verildiyse aboneliği sessizce tazele (tek sefer)
+  if (cloudEnabled && !pushChecked) { pushChecked = true; ensurePushSubscribed(u, false); }
 }
 
 // Aktif sekmeyi (yana kaydırılabilir şeritte) görünür yap
@@ -452,6 +454,10 @@ function mountProfile(u) {
         <div class="field"><label>Dil / Language</label><select id="pf_lang">${langOpts}</select></div>
         <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="pf_pw" type="text" placeholder="••••" /></div>
         <div class="field"><label>Yeni Şifre (tekrar)</label><input id="pf_pw2" type="text" /></div>
+        <div class="field">
+          <label>Bildirimler</label>
+          <button class="btn-ghost" id="pf_push" style="width:100%">🔔 Bildirimleri Aç</button>
+        </div>
         <div class="form-actions">
           <button class="btn-primary" id="pf_save">Kaydet</button>
           <button class="btn-ghost" id="pf_cancel">İptal</button>
@@ -460,6 +466,8 @@ function mountProfile(u) {
       </div>
     </div>`);
   const close = () => { showProfile = false; render(); };
+  const pushBtn = document.getElementById("pf_push");
+  if (pushBtn) pushBtn.onclick = () => ensurePushSubscribed(u, true);
   document.getElementById("pf_cancel").onclick = close;
   document.getElementById("pf_overlay").onclick = (e) => { if (e.target.id === "pf_overlay") close(); };
   document.getElementById("pf_save").onclick = () => {
@@ -1216,6 +1224,7 @@ function wireMgrTasks(u) {
       reads: {},
     });
     saveDB(DB);
+    notifyUsers(assignees, "Yeni görev", title, "/");
     render();
   };
   wireDelTask();
@@ -1763,11 +1772,13 @@ function wireChefAssigned(u) {
     b.onclick = () => {
       const t = DB.tasks.find((x) => x.id === b.dataset.shareSave);
       if (!t) { sharingTask = null; render(); return; }
+      const added = [];
       Array.from(document.querySelectorAll(".share-pick.sel")).forEach((el) => {
         const id = el.dataset.id;
-        if (!t.assignedUserIds.includes(id)) t.assignedUserIds.push(id);
+        if (!t.assignedUserIds.includes(id)) { t.assignedUserIds.push(id); added.push(id); }
       });
       saveDB(DB);
+      notifyUsers(added, "Görev paylaşıldı", t.title, "/");
       sharingTask = null;
       render();
     };
@@ -1895,6 +1906,12 @@ function wireReports(u) {
       reply: "", resolvedAt: null, resolvedBy: null, seenByReporter: true,
     });
     saveDB(DB);
+    // ilgili kişilere bildirim
+    let recips = [];
+    if (target === "sef") recips = [toUserId];
+    else if (target === "tumsef") recips = orgChefs(ownerIdOf(u)).map((c) => c.id);
+    else recips = [ownerIdOf(u)];
+    notifyUsers(recips, "Yeni bildirim", text, "/");
     render();
   };
 
@@ -1909,6 +1926,7 @@ function wireReports(u) {
       r.resolvedBy = u.id;
       r.seenByReporter = false;     // gönderene bildirilecek
       saveDB(DB);
+      notifyUsers([r.createdBy], "Bildiriminiz çözüldü", r.reply || r.text, "/");
       render();
     };
   });
@@ -2058,6 +2076,7 @@ function decideLeave(id, status, u) {
   l.decidedAt = new Date().toISOString();
   l.seenByReporter = false;
   saveDB(DB);
+  notifyUsers([l.createdBy], "İzin / Mesai talebiniz", status === "onaylandi" ? "Onaylandı ✅" : "Reddedildi ❌", "/");
   render();
 }
 
@@ -2087,6 +2106,7 @@ function wireLeaves(u) {
       decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
     });
     saveDB(DB);
+    notifyUsers([ownerIdOf(u)], "Yeni izin/mesai talebi", u.name, "/");
     render();
   };
   document.querySelectorAll("[data-leave-ok]").forEach((b) => {
@@ -2182,6 +2202,13 @@ function wireAnnouncements(u) {
       target, venueIds, text, createdAt: new Date().toISOString(),
     });
     saveDB(DB);
+    // hedefteki herkese bildirim
+    const owner = ownerIdOf(u);
+    const everyone = [...orgChefs(owner), ...orgStaff(owner)];
+    const recips = (target === "org")
+      ? everyone.map((p) => p.id)
+      : everyone.filter((p) => (p.venueIds || []).some((v) => venueIds.includes(v))).map((p) => p.id);
+    notifyUsers(recips.filter((id) => id !== u.id), "📢 Duyuru", text, "/");
     render();
   };
   document.querySelectorAll("[data-del-annc]").forEach((b) => {
@@ -2480,6 +2507,65 @@ function startPolling() {
       }
     } catch (e) { /* sessiz */ }
   }, 20000);
+}
+
+/* ---------------- Push bildirimleri ---------------- */
+const VAPID_PUBLIC = "BJ-IwLxYsUxi3FBjcdKbsTfRo-XkBRHE3kck5-lNIDAz_2hs085MnLWff2RHriSjmfouHdLnC_AzYPyqx8ZId4o";
+let pushChecked = false;
+
+function urlBase64ToUint8Array(b64) {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const base = (b64 + pad).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+// İzin verildiyse (veya force ile) push aboneliğini oluştur ve sunucuya kaydet
+async function ensurePushSubscribed(u, force) {
+  if (!cloudEnabled || !u) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    if (force) alert("Bu cihaz/tarayıcı bildirimleri desteklemiyor. (iPhone'da: önce uygulamayı ana ekrana ekleyin.)");
+    return;
+  }
+  if (Notification.permission === "denied") {
+    if (force) alert("Bildirim izni reddedilmiş. Tarayıcı ayarlarından fixpre.com için izin vermelisiniz.");
+    return;
+  }
+  if (Notification.permission !== "granted") {
+    if (!force) return;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      });
+    }
+    await fetch("/api/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-fixpre-key": CLOUD_KEY },
+      body: JSON.stringify({ type: "subscribe", userId: u.id, sub }),
+    });
+    if (force) alert("Bildirimler açıldı! ✅");
+  } catch (e) { if (force) alert("Bildirim kurulamadı: " + (e && e.message)); }
+}
+
+// Belirli kullanıcılara push gönder (tetikleyici olaylarda çağrılır)
+function notifyUsers(userIds, title, body, url) {
+  if (!cloudEnabled || !userIds || !userIds.length) return;
+  const ids = userIds.filter(Boolean);
+  if (!ids.length) return;
+  fetch("/api/push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-fixpre-key": CLOUD_KEY },
+    body: JSON.stringify({ type: "notify", toUserIds: ids, title, body: body || "", url: url || "/" }),
+  }).catch(() => {});
 }
 
 /* ---------------- Başlat ---------------- */
