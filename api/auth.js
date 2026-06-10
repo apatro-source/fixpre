@@ -9,6 +9,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { neon } = require("@neondatabase/serverless");
 
+const SUPER_EMAIL = "h.dirmilli48@gmail.com";       // sınırsız + yetki verebilen hesap
+const DEFAULT_MAX_VENUES = 1;
+const DEFAULT_MAX_STAFF = 5;
+
 function genId(p) { return (p || "id_") + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function sign(payload) { return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "180d" }); }
 function readToken(req) {
@@ -25,6 +29,19 @@ async function initTables(sql) {
   await sql`create table if not exists org_state (
     org_id text primary key, data jsonb not null default '{}'::jsonb, updated_at timestamptz default now()
   )`;
+  await sql`create table if not exists org_plans (
+    org_id text primary key, max_venues int not null default 1, max_staff int not null default 5,
+    unlimited boolean not null default false, updated_at timestamptz default now()
+  )`;
+}
+
+// Organizasyonun planı/limitleri (süper admin org'u = sınırsız)
+async function getPlan(sql, orgId) {
+  const owner = await sql`select email from accounts where org_id = ${orgId} and role = 'yonetici' limit 1`;
+  if (owner.length && owner[0].email === SUPER_EMAIL) return { maxVenues: 999999, maxStaff: 999999, unlimited: true };
+  const p = await sql`select max_venues, max_staff, unlimited from org_plans where org_id = ${orgId}`;
+  if (p.length) return { maxVenues: p[0].max_venues, maxStaff: p[0].max_staff, unlimited: p[0].unlimited };
+  return { maxVenues: DEFAULT_MAX_VENUES, maxStaff: DEFAULT_MAX_STAFF, unlimited: false };
 }
 
 module.exports = async (req, res) => {
@@ -53,7 +70,8 @@ module.exports = async (req, res) => {
         venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [],
       };
       await sql`insert into org_state (org_id, data, updated_at) values (${orgId}, ${JSON.stringify(data)}::jsonb, now())`;
-      res.status(200).json({ token: sign({ uid: userId, org: orgId, role: "yonetici" }), userId, data });
+      const plan = await getPlan(sql, orgId);
+      res.status(200).json({ token: sign({ uid: userId, org: orgId, role: "yonetici" }), userId, data, plan });
       return;
     }
 
@@ -66,7 +84,8 @@ module.exports = async (req, res) => {
       }
       const acc = rows[0];
       const st = await sql`select data from org_state where org_id = ${acc.org_id}`;
-      res.status(200).json({ token: sign({ uid: acc.id, org: acc.org_id, role: acc.role }), userId: acc.id, data: st.length ? st[0].data : null });
+      const plan = await getPlan(sql, acc.org_id);
+      res.status(200).json({ token: sign({ uid: acc.id, org: acc.org_id, role: acc.role }), userId: acc.id, data: st.length ? st[0].data : null, plan });
       return;
     }
 
@@ -83,12 +102,38 @@ module.exports = async (req, res) => {
       const email = (body.email || "").trim().toLowerCase();
       const password = body.password || "";
       if (!name || !email || !password) { res.status(400).json({ error: "missing" }); return; }
+      // personel limiti (demo planı) — sunucuda zorunlu
+      if (role === "personel") {
+        const plan = await getPlan(sql, claim.org);
+        if (!plan.unlimited) {
+          const cnt = await sql`select count(*)::int as n from accounts where org_id = ${claim.org} and role = 'personel'`;
+          if (cnt[0].n >= plan.maxStaff) { res.status(403).json({ error: "limit_staff" }); return; }
+        }
+      }
       const ex = await sql`select 1 from accounts where email = ${email}`;
       if (ex.length) { res.status(409).json({ error: "email_taken" }); return; }
       const userId = genId("id_");
       const hash = await bcrypt.hash(password, 10);
       await sql`insert into accounts (id, org_id, email, password_hash, role) values (${userId}, ${claim.org}, ${email}, ${hash}, ${role})`;
       res.status(200).json({ userId });
+      return;
+    }
+
+    if (action === "setPlan") {
+      // yalnızca süper admin
+      const meRows = await sql`select email from accounts where id = ${claim.uid}`;
+      if (!meRows.length || meRows[0].email !== SUPER_EMAIL) { res.status(403).json({ error: "forbidden" }); return; }
+      const targetEmail = (body.targetEmail || "").trim().toLowerCase();
+      const t = await sql`select org_id from accounts where email = ${targetEmail}`;
+      if (!t.length) { res.status(404).json({ error: "not_found" }); return; }
+      const orgId = t[0].org_id;
+      const unlimited = !!body.unlimited;
+      const maxVenues = Math.max(1, parseInt(body.maxVenues, 10) || DEFAULT_MAX_VENUES);
+      const maxStaff = Math.max(1, parseInt(body.maxStaff, 10) || DEFAULT_MAX_STAFF);
+      await sql`insert into org_plans (org_id, max_venues, max_staff, unlimited, updated_at)
+        values (${orgId}, ${maxVenues}, ${maxStaff}, ${unlimited}, now())
+        on conflict (org_id) do update set max_venues = excluded.max_venues, max_staff = excluded.max_staff, unlimited = excluded.unlimited, updated_at = now()`;
+      res.status(200).json({ ok: true });
       return;
     }
 

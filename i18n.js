@@ -57,6 +57,11 @@ const I18N_ROWS = [
   ["Gönderdiğim Talepler (", "My Requests (", "Meine Anfragen (", "Мои запросы (", "Mis solicitudes (", "Le mie richieste ("],
   ["Bu aralıkta bekleyen talep yok.", "No pending requests in this range.", "Keine offenen Anfragen in diesem Zeitraum.", "Нет ожидающих запросов в этом диапазоне.", "No hay solicitudes pendientes en este rango.", "Nessuna richiesta in sospeso in questo intervallo."],
   ["Bu aralıkta talep yok.", "No requests in this range.", "Keine Anfragen in diesem Zeitraum.", "Нет запросов в этом диапазоне.", "No hay solicitudes en este rango.", "Nessuna richiesta in questo intervallo."],
+  // Demo/limit uyarıları (parça parça; araya sayı ve e-posta girer)
+  ["Demo planı: en fazla ", "Demo plan: up to ", "Demo-Plan: bis zu ", "Демо-план: до ", "Plan demo: hasta ", "Piano demo: fino a "],
+  [" personel ekleyebilirsiniz. Daha fazlası için ", " staff. For more, contact ", " Mitarbeiter. Für mehr kontaktieren Sie ", " сотрудников. Для большего напишите ", " empleados. Para más, contacte ", " dipendenti. Per altro, contatta "],
+  [" mekan ekleyebilirsiniz. Daha fazlası için ", " venues. For more, contact ", " Standorte. Für mehr kontaktieren Sie ", " объектов. Для большего напишите ", " lugares. Para más, contacte ", " sedi. Per altro, contatta "],
+  [" ile iletişime geçin.", ".", ".", ".", ".", "."],
   ["Bildirimler", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
   ["Bildirim", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
 

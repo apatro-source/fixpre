@@ -99,6 +99,9 @@ function migrate(db) {
 
 let DB = loadDB();
 
+const SUPER_EMAIL = "h.dirmilli48@gmail.com";   // sınırsız + yetki veren hesap
+let orgPlan = { maxVenues: 1, maxStaff: 5, unlimited: false }; // demo varsayılan; sunucudan güncellenir
+
 /* ---------------- Oturum (güvenli: token + hash) ---------------- */
 const TOKEN_KEY = "fixpre_token";
 const UID_KEY = "fixpre_uid";
@@ -129,6 +132,7 @@ async function doLogin(email, password) {
   localStorage.setItem(TOKEN_KEY, j.token);
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
+  if (j.plan) orgPlan = j.plan;
   // giriş ekranında seçilen dili kullanıcıya uygula (menü o dilde gelsin)
   const me = DB.users.find((x) => x.id === j.userId);
   if (me && me.lang !== guestLang()) { me.lang = guestLang(); saveDB(DB); }
@@ -140,6 +144,7 @@ async function doRegister(name, email, password) {
   localStorage.setItem(TOKEN_KEY, j.token);
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
+  if (j.plan) orgPlan = j.plan;
   saveLocal(DB);
 }
 
@@ -488,6 +493,18 @@ function mountProfile(u) {
           <label>Bildirimler</label>
           <button class="btn-ghost" id="pf_push" style="width:100%">🔔 Bildirimleri Aç</button>
         </div>
+        ${u.email === SUPER_EMAIL ? `
+        <div class="field" style="border-top:1px solid var(--border);padding-top:12px">
+          <label>🔑 Yetki Ver (süper admin)</label>
+          <input id="sa_email" placeholder="kullanici@eposta.com" />
+          <div class="row" style="margin-top:8px">
+            <div class="field"><label>Mekan</label><input id="sa_venues" type="number" min="1" value="1" /></div>
+            <div class="field"><label>Personel</label><input id="sa_staff" type="number" min="1" value="5" /></div>
+          </div>
+          <label class="check-pill" style="margin-top:8px"><input type="checkbox" id="sa_unlimited" /> Sınırsız</label>
+          <button class="btn-ghost" id="sa_grant" style="width:100%;margin-top:10px">Yetkiyi Uygula</button>
+          <div class="error-msg" id="sa_msg"></div>
+        </div>` : ""}
         <div class="form-actions">
           <button class="btn-primary" id="pf_save">Kaydet</button>
           <button class="btn-ghost" id="pf_cancel">İptal</button>
@@ -498,6 +515,26 @@ function mountProfile(u) {
   const close = () => { showProfile = false; render(); };
   const pushBtn = document.getElementById("pf_push");
   if (pushBtn) pushBtn.onclick = () => ensurePushSubscribed(u, true);
+
+  const grantBtn = document.getElementById("sa_grant");
+  if (grantBtn) grantBtn.onclick = async () => {
+    const targetEmail = document.getElementById("sa_email").value.trim();
+    const maxVenues = parseInt(document.getElementById("sa_venues").value, 10) || 1;
+    const maxStaff = parseInt(document.getElementById("sa_staff").value, 10) || 5;
+    const unlimited = document.getElementById("sa_unlimited").checked;
+    const msg = document.getElementById("sa_msg");
+    if (!targetEmail) { msg.textContent = "E-posta girin."; return; }
+    grantBtn.disabled = true; msg.textContent = "";
+    try {
+      await authCall({ action: "setPlan", targetEmail, maxVenues, maxStaff, unlimited });
+      msg.style.color = "#059669";
+      msg.textContent = "Yetki uygulandı ✅ (kullanıcı bir sonraki açılışta görür)";
+    } catch (e) {
+      grantBtn.disabled = false;
+      msg.textContent = (String(e.message) === "not_found") ? "Bu e-postayla kayıt bulunamadı."
+        : (String(e.message) === "forbidden") ? "Bu işlem için yetkiniz yok." : "Olmadı (bağlantı?).";
+    }
+  };
   document.getElementById("pf_cancel").onclick = close;
   document.getElementById("pf_overlay").onclick = (e) => { if (e.target.id === "pf_overlay") close(); };
   document.getElementById("pf_save").onclick = async () => {
@@ -1379,6 +1416,10 @@ function wireMgrStaff(u) {
     const err = document.getElementById("s_err");
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
     if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    if (!orgPlan.unlimited && orgStaff(ownerIdOf(u)).length >= orgPlan.maxStaff) {
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      return;
+    }
     addBtn.disabled = true; err.textContent = "";
     try {
       const j = await authCall({ action: "createUser", role: "personel", name, email, password: pw });
@@ -1390,7 +1431,9 @@ function wireMgrStaff(u) {
       render();
     } catch (e) {
       addBtn.disabled = false;
-      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Eklenemedi (bağlantı?).";
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda."
+        : (String(e.message) === "limit_staff") ? `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`
+        : "Eklenemedi (bağlantı?).";
     }
   };
 
@@ -1536,6 +1579,10 @@ function wireMgrVenues(u) {
     const addr = document.getElementById("v_addr").value.trim();
     const err = document.getElementById("v_err");
     if (!name) { err.textContent = "Mekan adı gerekli."; return; }
+    if (!orgPlan.unlimited && orgVenues(ownerIdOf(u)).length >= orgPlan.maxVenues) {
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxVenues} mekan ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      return;
+    }
     DB.venues.push({ id: uid(), name, address: addr, ownerId: ownerIdOf(u) });
     saveDB(DB);
     render();
@@ -2550,6 +2597,7 @@ async function cloudBootstrap() {
   if (authToken()) {
     try {
       const res = await dataGet();
+      if (res && res.plan) orgPlan = res.plan;
       if (res && res.data) { DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt; }
     } catch (e) {
       if (String(e.message) === "401") { // token geçersiz/süresi dolmuş -> çıkış
@@ -2569,6 +2617,7 @@ function startPolling() {
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     try {
       const res = await dataGet();
+      if (res && res.plan) orgPlan = res.plan;
       if (res && res.data && res.updatedAt && res.updatedAt !== lastAppliedAt) {
         DB = migrate(res.data);
         saveLocal(DB);

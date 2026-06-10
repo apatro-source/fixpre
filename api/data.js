@@ -4,11 +4,21 @@
 const jwt = require("jsonwebtoken");
 const { neon } = require("@neondatabase/serverless");
 
+const SUPER_EMAIL = "h.dirmilli48@gmail.com";
+
 function readToken(req) {
   const a = req.headers["authorization"] || "";
   const m = a.match(/^Bearer\s+(.+)$/i);
   if (!m) return null;
   try { return jwt.verify(m[1], process.env.JWT_SECRET); } catch (e) { return null; }
+}
+
+async function getPlan(sql, orgId) {
+  const owner = await sql`select email from accounts where org_id = ${orgId} and role = 'yonetici' limit 1`;
+  if (owner.length && owner[0].email === SUPER_EMAIL) return { maxVenues: 999999, maxStaff: 999999, unlimited: true };
+  const p = await sql`select max_venues, max_staff, unlimited from org_plans where org_id = ${orgId}`;
+  if (p.length) return { maxVenues: p[0].max_venues, maxStaff: p[0].max_staff, unlimited: p[0].unlimited };
+  return { maxVenues: 1, maxStaff: 5, unlimited: false };
 }
 
 module.exports = async (req, res) => {
@@ -20,10 +30,17 @@ module.exports = async (req, res) => {
     await sql`create table if not exists org_state (
       org_id text primary key, data jsonb not null default '{}'::jsonb, updated_at timestamptz default now()
     )`;
+    await sql`create table if not exists org_plans (
+      org_id text primary key, max_venues int not null default 1, max_staff int not null default 5,
+      unlimited boolean not null default false, updated_at timestamptz default now()
+    )`;
 
     if (req.method === "GET") {
       const rows = await sql`select data, updated_at from org_state where org_id = ${claim.org}`;
-      res.status(200).json(rows.length ? { data: rows[0].data, updatedAt: rows[0].updated_at } : { data: null, updatedAt: null });
+      const plan = await getPlan(sql, claim.org);
+      res.status(200).json(rows.length
+        ? { data: rows[0].data, updatedAt: rows[0].updated_at, plan }
+        : { data: null, updatedAt: null, plan });
       return;
     }
     if (req.method === "PUT") {
