@@ -212,14 +212,12 @@ function visibleTasks(u) {
 
 // Bir göreve atanabilecek kişiler:
 //  - yönetici: organizasyondaki şefler + personel
-//  - şef: kendi eklediği personel + kendi mekanlarına atanmış personel
+//  - şef: yalnızca kendi sorumlu olduğu mekanlardaki personel (mekana göre)
 function assignableUsers(u) {
   const owner = ownerIdOf(u);
   if (u.role === "yonetici") return [...orgChefs(owner), ...orgStaff(owner)];
   const myVenues = u.venueIds || [];
-  return orgStaff(owner).filter((s) =>
-    s.chefId === u.id || (s.venueIds || []).some((v) => myVenues.includes(v))
-  );
+  return orgStaff(owner).filter((s) => (s.venueIds || []).some((v) => myVenues.includes(v)));
 }
 function roleIcon(x) { return x && x.role === "sef" ? "👔" : "👤"; }
 
@@ -1260,6 +1258,15 @@ function wireMgrStaff(u) {
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
     if (DB.users.some((x) => x.id !== s.id && x.email.toLowerCase() === email.toLowerCase())) {
       err.textContent = "Bu e-posta zaten kullanımda."; return;
+    }
+    // Ayrıldığı mekanlara ait görevlerden bu personeli çıkar (mekan değişti)
+    const removedVenues = (s.venueIds || []).filter((v) => !venueIds.includes(v));
+    if (removedVenues.length) {
+      DB.tasks.forEach((t) => {
+        if (t.venueId && removedVenues.includes(t.venueId)) {
+          t.assignedUserIds = t.assignedUserIds.filter((a) => a !== s.id);
+        }
+      });
     }
     s.name = name; s.email = email; s.password = pw; s.venueIds = venueIds;
     saveDB(DB);
