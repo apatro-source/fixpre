@@ -2201,7 +2201,6 @@ function leavesView(u) {
 
   if (u.role === "yonetici") {
     const pending = orgLeaves(owner).filter((l) => l.status === "beklemede").sort(byDate);
-    const decided = orgLeaves(owner).filter((l) => l.status !== "beklemede").sort(byDate);
     const people = [...orgChefs(owner), ...orgStaff(owner)];
     const balanceRows = people.length ? people.map((p) => {
       const hist = orgLeaves(owner).filter((l) => l.createdBy === p.id).sort(byDate);
@@ -2223,7 +2222,6 @@ function leavesView(u) {
       <div class="section-title">Mesai Durumu (Eksik / Fazla)</div>
       <p style="color:var(--muted);font-size:13px;margin:-8px 0 12px">🟢 Fazla & Telafi = alacak · 🔴 İzin & Geç gelme & Eksik = borç · (1 gün = ${WORKDAY_HOURS} saat). Sadece onaylanan talepler sayılır.</p>
       ${balanceRows}
-      ${decided.length ? `<details class="cat" style="margin-top:14px"><summary><span>Geçmiş Talepler</span><span class="cat-count">${decided.length}</span></summary><div class="cat-body" style="padding-top:12px">${decided.map((l) => leaveCard(u, l, false)).join("")}</div></details>` : ""}
     `;
   }
 
