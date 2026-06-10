@@ -100,6 +100,14 @@ function migrate(db) {
 let DB = loadDB();
 
 const SUPER_EMAIL = "h.dirmilli48@gmail.com";   // sınırsız + yetki veren hesap
+
+// Satış paketleri (USD). Süper admin panelinde tek tık doldurma için.
+const PACKAGES = [
+  { key: "free",  name: "Deneme",       venues: 1, chefs: 1, staff: 4,  unlimited: false, price: "$0" },
+  { key: "start", name: "Başlangıç",    venues: 1, chefs: 2, staff: 15, unlimited: false, price: "$19/ay" },
+  { key: "pro",   name: "Profesyonel",  venues: 3, chefs: 6, staff: 50, unlimited: false, price: "$49/ay" },
+  { key: "corp",  name: "Kurumsal",     venues: 1, chefs: 1, staff: 1,  unlimited: true,  price: "$99/ay" },
+];
 let orgPlan = { maxVenues: 1, maxStaff: 4, maxChefs: 1, unlimited: false }; // demo varsayılan; sunucudan güncellenir
 
 /* ---------------- Oturum (güvenli: token + hash) ---------------- */
@@ -514,6 +522,9 @@ function mountProfile(u) {
         <div class="field" style="border-top:1px solid var(--border);padding-top:12px">
           <label>🔑 Yetki Ver (süper admin)</label>
           <input id="sa_email" placeholder="kullanici@eposta.com" />
+          <div class="pkg-presets">
+            ${PACKAGES.map((p) => `<button type="button" class="pkg-btn" data-pkg="${p.key}">${p.name}<span>${p.price}</span></button>`).join("")}
+          </div>
           <div class="row" style="margin-top:8px">
             <div class="field"><label>Mekan</label><input id="sa_venues" type="number" min="1" value="1" /></div>
             <div class="field"><label>Şef</label><input id="sa_chefs" type="number" min="0" value="1" /></div>
@@ -533,6 +544,19 @@ function mountProfile(u) {
   const close = () => { showProfile = false; render(); };
   const pushBtn = document.getElementById("pf_push");
   if (pushBtn) pushBtn.onclick = () => ensurePushSubscribed(u, true);
+
+  document.querySelectorAll("[data-pkg]").forEach((b) => {
+    b.onclick = () => {
+      const p = PACKAGES.find((x) => x.key === b.dataset.pkg);
+      if (!p) return;
+      document.getElementById("sa_venues").value = p.venues;
+      document.getElementById("sa_chefs").value = p.chefs;
+      document.getElementById("sa_staff").value = p.staff;
+      document.getElementById("sa_unlimited").checked = p.unlimited;
+      document.querySelectorAll(".pkg-btn").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+    };
+  });
 
   const grantBtn = document.getElementById("sa_grant");
   if (grantBtn) grantBtn.onclick = async () => {
