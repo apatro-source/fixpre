@@ -5,7 +5,8 @@ const bcrypt = require("bcryptjs");
 const { neon } = require("@neondatabase/serverless");
 
 module.exports = async (req, res) => {
-  if (!process.env.FIXPRE_KEY || req.headers["x-fixpre-key"] !== process.env.FIXPRE_KEY) {
+  const provided = req.headers["x-fixpre-key"] || (req.query && req.query.key);
+  if (!process.env.FIXPRE_KEY || provided !== process.env.FIXPRE_KEY) {
     res.status(401).json({ error: "unauthorized" }); return;
   }
   if (!process.env.DATABASE_URL) { res.status(500).json({ error: "no_db" }); return; }
