@@ -221,6 +221,13 @@ function assignableUsers(u) {
 }
 function roleIcon(x) { return x && x.role === "sef" ? "👔" : "👤"; }
 
+// Atanan kişi, görevin mekanı artık kendi mekanı değilse o görevi görmesin
+// (mekan değişince görev otomatik düşer). Mekansız görevler herkese görünür.
+function taskVenueOk(t, u) {
+  if (!t.venueId) return true;
+  return (u.venueIds || []).includes(t.venueId);
+}
+
 /* ---- Bildirim / Talep sistemi ---- */
 const REPORT_CATS = [
   { key: "ariza", label: "Arıza", icon: "🔧" },
@@ -842,7 +849,7 @@ function mgrDashboard(u) {
 
   // Şefe atanan (kendisinin yapacağı) bugünkü görevler — panoda da göster
   const myAssigned = (u.role === "sef")
-    ? DB.tasks.filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t))
+    ? DB.tasks.filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t) && taskVenueOk(t, u))
         .sort((a, b) => {
           const ad = !!a.completions[occKeyToday(a)];
           const bd = !!b.completions[occKeyToday(b)];
@@ -1629,7 +1636,7 @@ function wireMgrChefs(u) {
    ============================================================ */
 function assignedToMe(u) {
   const myTasks = DB.tasks
-    .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t))
+    .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t) && taskVenueOk(t, u))
     .sort((a, b) => {
       const ad = !!a.completions[occKeyToday(a)];
       const bd = !!b.completions[occKeyToday(b)];
@@ -2153,7 +2160,7 @@ function renderStaff(u) {
 /* --- Personel: bugünkü görevler --- */
 function staffToday(u) {
   const myTasks = DB.tasks
-    .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t))
+    .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t) && taskVenueOk(t, u))
     .sort((a, b) => {
       const ad = !!a.completions[occKeyToday(a)];
       const bd = !!b.completions[occKeyToday(b)];
@@ -2162,7 +2169,7 @@ function staffToday(u) {
     });
   markReads(u, myTasks);
   const pending = myTasks.filter((t) => !t.completions[occKeyToday(t)]).length;
-  const myAssigned = DB.tasks.filter((t) => t.assignedUserIds.includes(u.id));
+  const myAssigned = DB.tasks.filter((t) => t.assignedUserIds.includes(u.id) && taskVenueOk(t, u));
   const missed = pastMissedFor(myAssigned, "", "");
   return `
     ${resolvedBanner(u)}
