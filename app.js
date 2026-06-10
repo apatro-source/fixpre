@@ -443,6 +443,7 @@ let editingStaff = null;          // düzenlenen personel/şef id'si
 let editingTask = null;           // düzenlenen görev id'si
 let sharingTask = null;           // şefin paylaşmak istediği görev id'si
 let showProfile = false;          // profil (dil/şifre) penceresi açık mı
+let showAnnounce = false;         // duyuru yap penceresi açık mı
 
 /* ---------------- Render ---------------- */
 
@@ -454,6 +455,7 @@ function render() {
   if (u.role === "yonetici" || u.role === "sef") renderManager(u);
   else renderStaff(u);
   if (showProfile) mountProfile(u);
+  if (showAnnounce) mountAnnounce(u);
   translateUI();
   scrollActiveTabIntoView();
   // izin daha önce verildiyse aboneliği sessizce tazele (tek sefer)
@@ -479,6 +481,21 @@ function translateUI() {
 }
 
 // Profil penceresi: dil tercihi + şifre değiştirme (her rol için)
+// Duyuru yap penceresi (üst bardaki 📢 ikonu)
+function mountAnnounce(u) {
+  app.insertAdjacentHTML("beforeend", `
+    <div class="modal-overlay" id="an_overlay">
+      <div class="modal">
+        ${announcementCompose(u)}
+        <button class="btn-ghost" id="an_close" style="width:100%;margin-top:6px">Kapat</button>
+      </div>
+    </div>`);
+  const close = () => { showAnnounce = false; render(); };
+  document.getElementById("an_close").onclick = close;
+  document.getElementById("an_overlay").onclick = (e) => { if (e.target.id === "an_overlay") close(); };
+  wireAnnouncements(u);
+}
+
 function mountProfile(u) {
   const langOpts = LANGS.map(([k, l]) => `<option value="${k}" ${u.lang === k ? "selected" : ""}>${l}</option>`).join("");
   app.insertAdjacentHTML("beforeend", `
@@ -697,7 +714,8 @@ function topbar(u) {
       <div class="user-info">
         ${roleBadge}
         <span>${esc(u.name)}</span>
-        <button class="btn-ghost btn-sm" id="profileBtn">⚙️ Profil</button>
+        ${(u.role === "yonetici" || u.role === "sef") ? `<button class="btn-ghost btn-sm icon-btn" id="announceBtn" title="Duyuru Yap">📢</button>` : ""}
+        <button class="btn-ghost btn-sm icon-btn" id="profileBtn" title="Profil">⚙️</button>
         <button class="btn-ghost btn-sm" id="logoutBtn">Çıkış</button>
       </div>
     </div>
@@ -709,6 +727,8 @@ function wireCommon() {
   if (lb) lb.onclick = logout;
   const pb = document.getElementById("profileBtn");
   if (pb) pb.onclick = () => { showProfile = true; render(); };
+  const ab = document.getElementById("announceBtn");
+  if (ab) ab.onclick = () => { showAnnounce = true; render(); };
 }
 
 /* ============================================================
@@ -914,8 +934,8 @@ function statCard(label, value, kind, icon) {
   </div>`;
 }
 
-// Kırmızı geciken görevler panosu. forStaff=true ise "Şimdi tamamla" butonu çıkar.
-function overdueBoard(missed, forStaff) {
+// Kırmızı geciken görevler panosu. forStaff=true ise "Şimdi tamamla"; withFilter=true ise tarih filtresi (içeride).
+function overdueBoard(missed, forStaff, withFilter) {
   const rows = missed.map((m) => {
     const t = m.task;
     const v = t.venueId ? venueById(t.venueId) : null;
@@ -931,9 +951,15 @@ function overdueBoard(missed, forStaff) {
       </div>` : ""}
     </div>`;
   }).join("");
+  const filter = withFilter ? `
+    <details class="reads-toggle" style="margin-bottom:10px;border-top:none;padding-top:0">
+      <summary>📅 Tarihe göre filtrele</summary>
+      <div style="padding-top:8px">${rangeFilter("dash", dashFrom, dashTo)}</div>
+    </details>` : "";
   return `
     <div class="overdue-board">
       <div class="overdue-head">🔴 Geciken Görevler (${missed.length})</div>
+      ${filter}
       ${missed.length ? rows : `<div class="overdue-empty">Geciken görev yok. 🎉</div>`}
     </div>`;
 }
@@ -987,16 +1013,8 @@ function mgrDashboard(u) {
 
     ${assignedSection}
     ${announcementsBoard(u)}
-    <details class="cat" style="margin-bottom:18px">
-      <summary><span>📢 Duyuru Yap</span></summary>
-      <div class="cat-body" style="padding:14px">${announcementCompose(u)}</div>
-    </details>
     ${reportsPanel(u)}
-    ${overdueBoard(missed, false)}
-    <details class="cat" style="margin-bottom:18px">
-      <summary><span>📅 Geciken görevleri tarihe göre filtrele</span></summary>
-      <div class="cat-body" style="padding:14px">${rangeFilter("dash", dashFrom, dashTo)}</div>
-    </details>
+    ${overdueBoard(missed, false, true)}
 
     <h3 style="margin:0 0 12px">🔄 Bugün Aktif (${active.length})</h3>
     ${active.length ? venueCategories(u, active) : `<div class="empty">Bugün bekleyen görev yok. 🎉</div>`}
@@ -2474,6 +2492,7 @@ function wireAnnouncements(u) {
       ? everyone.map((p) => p.id)
       : everyone.filter((p) => (p.venueIds || []).some((v) => venueIds.includes(v))).map((p) => p.id);
     notifyUsers(recips.filter((id) => id !== u.id), "📢 Duyuru", text, "/");
+    showAnnounce = false;
     render();
   };
   document.querySelectorAll("[data-del-annc]").forEach((b) => {
