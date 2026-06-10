@@ -1645,7 +1645,7 @@ function shareBlock(t, u) {
   }
   const candidates = assignableUsers(u).filter((s) => s.role === "personel" && !t.assignedUserIds.includes(s.id));
   const checks = candidates.length
-    ? candidates.map((s) => `<label class="check-pill"><input type="checkbox" class="share-pick" value="${s.id}" />${esc(s.name)}</label>`).join("")
+    ? candidates.map((s) => `<button type="button" class="check-pill share-pick" data-id="${s.id}">${esc(s.name)}</button>`).join("")
     : `<div class="empty" style="padding:8px">Eklenebilecek başka personel yok.</div>`;
   return `
     <div class="share-box">
@@ -1666,15 +1666,16 @@ function wireChefAssigned(u) {
   document.querySelectorAll("[data-share-cancel]").forEach((b) => {
     b.onclick = () => { sharingTask = null; render(); };
   });
-  document.querySelectorAll(".share-pick").forEach((cb) => {
-    cb.onchange = () => cb.closest(".check-pill").classList.toggle("sel", cb.checked);
+  document.querySelectorAll(".share-pick").forEach((b) => {
+    b.onclick = () => b.classList.toggle("sel");   // tek dokunuşta seç/bırak
   });
   document.querySelectorAll("[data-share-save]").forEach((b) => {
     b.onclick = () => {
       const t = DB.tasks.find((x) => x.id === b.dataset.shareSave);
       if (!t) { sharingTask = null; render(); return; }
-      Array.from(document.querySelectorAll(".share-pick:checked")).forEach((c) => {
-        if (!t.assignedUserIds.includes(c.value)) t.assignedUserIds.push(c.value);
+      Array.from(document.querySelectorAll(".share-pick.sel")).forEach((el) => {
+        const id = el.dataset.id;
+        if (!t.assignedUserIds.includes(id)) t.assignedUserIds.push(id);
       });
       saveDB(DB);
       sharingTask = null;
