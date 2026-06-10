@@ -1342,7 +1342,7 @@ function wireMgrVenues(u) {
     const addr = document.getElementById("v_addr").value.trim();
     const err = document.getElementById("v_err");
     if (!name) { err.textContent = "Mekan adı gerekli."; return; }
-    DB.venues.push({ id: uid(), name, address: addr, managerId: u.id });
+    DB.venues.push({ id: uid(), name, address: addr, ownerId: ownerIdOf(u) });
     saveDB(DB);
     render();
   };
