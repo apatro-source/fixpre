@@ -147,8 +147,16 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 
 .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
 
-.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.tabs {
+  display: flex; gap: 8px; margin-bottom: 22px;
+  flex-wrap: nowrap; overflow-x: auto;          /* tek satır, yana kaydırılabilir */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;                          /* Firefox: çubuğu gizle */
+  padding-bottom: 2px;
+}
+.tabs::-webkit-scrollbar { display: none; }       /* Chrome/Safari: çubuğu gizle */
 .tab {
+  flex: 0 0 auto; white-space: nowrap;            /* sekmeler küçülmesin/sarmasın */
   background: #fff; color: var(--muted); border: 2px solid var(--border);
   padding: 9px 18px; border-radius: 999px; font-weight: 700;
 }
@@ -157,6 +165,12 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff; border-color: transparent;
   box-shadow: 0 4px 12px rgba(99, 102, 241, .35);
+}
+
+/* Mobilde sekmeleri biraz küçült (daha çoğu görünsün) */
+@media (max-width: 640px) {
+  .tab { padding: 8px 14px; font-size: 13px; }
+  .tabs { gap: 6px; }
 }
 
 .card {

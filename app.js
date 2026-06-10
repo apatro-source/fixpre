@@ -414,6 +414,15 @@ function render() {
   else renderStaff(u);
   if (showProfile) mountProfile(u);
   translateUI();
+  scrollActiveTabIntoView();
+}
+
+// Aktif sekmeyi (yana kaydırılabilir şeritte) görünür yap
+function scrollActiveTabIntoView() {
+  const at = app.querySelector(".tab.active");
+  if (at && at.scrollIntoView) {
+    try { at.scrollIntoView({ inline: "center", block: "nearest" }); } catch (e) { /* yoksay */ }
+  }
 }
 
 // Render sonrası ekranı kullanıcının diline çevir
