@@ -1098,8 +1098,9 @@ function mgrTasks(u) {
   const categories = venueCategories(u, tasks);
 
   return `
-    <div class="card">
-      <h2>Yeni Görev Oluştur</h2>
+    <details class="cat" style="margin-bottom:18px">
+      <summary><span>➕ Yeni Görev Oluştur</span></summary>
+      <div class="cat-body" style="padding:14px">
       <div class="field">
         <label>Görev başlığı</label>
         <input id="t_title" placeholder="Örn: Salonu hazırla" />
@@ -1143,7 +1144,8 @@ function mgrTasks(u) {
       </div>
       <button class="btn-primary" id="t_create">Görevi Oluştur</button>
       <div class="error-msg" id="t_err"></div>
-    </div>
+      </div>
+    </details>
 
     <div class="section-title">Görevler (${tasks.length})</div>
     <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Görevleri görmek için bir mekana tıklayın.</p>

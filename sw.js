@@ -1,5 +1,5 @@
 /* Fixpre Service Worker — uygulama kabuğunu önbelleğe alır, API'yi ağdan çeker */
-const CACHE = "fixpre-v2";
+const CACHE = "fixpre-v3";
 const ASSETS = [
   "/", "/index.html", "/app.js", "/style.css", "/i18n.js",
   "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png",
@@ -23,7 +23,7 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("push", (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (err) { data = {}; }
-  const title = data.title || "Fixpre";
+  const title = "✅ " + (data.title || "Fixpre");
   const options = {
     body: data.body || "",
     icon: "/icon-192.png",
