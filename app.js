@@ -212,11 +212,14 @@ function visibleTasks(u) {
 
 // Bir göreve atanabilecek kişiler:
 //  - yönetici: organizasyondaki şefler + personel
-//  - şef: kendi personeli
+//  - şef: kendi eklediği personel + kendi mekanlarına atanmış personel
 function assignableUsers(u) {
   const owner = ownerIdOf(u);
   if (u.role === "yonetici") return [...orgChefs(owner), ...orgStaff(owner)];
-  return visibleStaff(u);
+  const myVenues = u.venueIds || [];
+  return orgStaff(owner).filter((s) =>
+    s.chefId === u.id || (s.venueIds || []).some((v) => myVenues.includes(v))
+  );
 }
 function roleIcon(x) { return x && x.role === "sef" ? "👔" : "👤"; }
 
