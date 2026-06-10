@@ -461,6 +461,31 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 .pkg-btn.active { border-color: var(--primary); background: #eef4ff; color: var(--primary); }
 .pkg-btn.active span { color: var(--primary); }
 
+/* ---- Müşteriye görünen paket kartları ---- */
+.pkg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.pkg-card {
+  position: relative; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 6px; border-top: 4px solid var(--border);
+}
+.pkg-card.pkg-free  { border-top-color: #94a3b8; }
+.pkg-card.pkg-start { border-top-color: #059669; }
+.pkg-card.pkg-pro   { border-top-color: #2563eb; }
+.pkg-card.pkg-corp  { border-top-color: #7c3aed; }
+.pkg-card.current { box-shadow: 0 0 0 2px var(--primary); }
+.pkg-cur-badge {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: var(--primary); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+}
+.pkg-name { font-size: 16px; font-weight: 800; }
+.pkg-price { font-size: 26px; font-weight: 800; }
+.pkg-price .pkg-per { font-size: 13px; font-weight: 600; color: var(--muted); }
+.pkg-feats { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.pkg-feats li { font-size: 13.5px; color: var(--text); }
+@media (max-width: 760px) { .pkg-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 420px) { .pkg-grid { grid-template-columns: 1fr; } }
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;

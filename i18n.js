@@ -266,6 +266,17 @@ const I18N_ROWS = [
   ["📊 Personel Performansı", "📊 Staff Performance", "📊 Personalleistung", "📊 Производительность персонала", "📊 Rendimiento del personal", "📊 Prestazioni del personale"],
   ["Açıklama: Tamamladığı = kişinin bizzat tamamladığı görev sayısı; Zamanında = gününde veya erken yapılan; Geç = sonradan yapılan; Geciken = ekipçe hiç yapılmamış (sorumlu olduğu); % = zamanında oranı.", "Note: Completed = tasks the person did themselves; On time = same day or early; Late = done afterwards; Overdue = not done by anyone on the team (assigned); % = on-time rate.", "Hinweis: Erledigt = vom Mitarbeiter selbst erledigte Aufgaben; Pünktlich = am Tag oder früher; Spät = nachträglich; Überfällig = vom Team gar nicht erledigt (zugewiesen); % = Pünktlichkeitsrate.", "Примечание: Выполнил = задачи, выполненные самим; Вовремя = в тот же день или раньше; Поздно = позже; Просрочено = не сделано всей командой (назначенные); % = доля вовремя.", "Nota: Completó = tareas hechas por la propia persona; A tiempo = el mismo día o antes; Tarde = después; Atrasado = nadie del equipo lo hizo (asignado); % = tasa a tiempo.", "Nota: Completate = attività svolte dalla persona; In orario = stesso giorno o prima; In ritardo = fatte dopo; In ritardo (team) = non fatte da nessuno (assegnate); % = percentuale puntuale."],
   ["Performans", "Performance", "Leistung", "Производительность", "Rendimiento", "Prestazioni"],
+
+  // --- Paketler (müşteriye görünür) ---
+  ["Paketler", "Plans", "Pakete", "Тарифы", "Planes", "Piani"],
+  ["Deneme", "Trial", "Test", "Пробный", "Prueba", "Prova"],
+  ["Profesyonel", "Professional", "Professionell", "Профи", "Profesional", "Professionale"],
+  ["Kurumsal", "Enterprise", "Unternehmen", "Корпоративный", "Empresa", "Aziendale"],
+  ["Sınırsız", "Unlimited", "Unbegrenzt", "Безлимит", "Ilimitado", "Illimitato"],
+  ["Mevcut Paketiniz", "Your Current Plan", "Ihr aktuelles Paket", "Ваш текущий тариф", "Su plan actual", "Il tuo piano attuale"],
+  ["/ay", "/mo", "/Mon.", "/мес", "/mes", "/mese"],
+  ["Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.", "All features are in every plan; only capacity differs. Pay yearly, get 2 months free.", "Alle Funktionen in jedem Paket; nur die Kapazität unterscheidet sich. Jährlich zahlen, 2 Monate gratis.", "Все функции есть в каждом тарифе; различается только ёмкость. Оплата за год — 2 месяца бесплатно.", "Todas las funciones en cada plan; solo cambia la capacidad. Pago anual, 2 meses gratis.", "Tutte le funzioni in ogni piano; cambia solo la capacità. Pagamento annuale, 2 mesi gratis."],
+  ["Paket yükseltmek için ", "To upgrade your plan, contact ", "Zum Upgrade kontaktieren Sie ", "Для апгрейда напишите ", "Para mejorar su plan, contacte ", "Per l'upgrade contatta "],
   ["Tamamladığı", "Completed", "Erledigt", "Выполнил", "Completó", "Completate"],
   ["Zamanında", "On time", "Pünktlich", "Вовремя", "A tiempo", "In orario"],
   ["Geç", "Late", "Spät", "Поздно", "Tarde", "In ritardo"],

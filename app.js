@@ -777,6 +777,7 @@ function renderManager(u) {
         ["bildirim", bildirimLabel],
         ["izin", izinLabel],
         ["kayitlar", "Kayıtlar"],
+        ["paketler", "Paketler"],
       ]
     : [
         ["bugun", "Pano"],
@@ -802,6 +803,7 @@ function renderManager(u) {
   else if (activeTab === "bildirim") body = reportsView(u);
   else if (activeTab === "izin") body = leavesView(u);
   else if (activeTab === "performans") body = perfView(u);
+  else if (activeTab === "paketler") body = packagesView(u);
   else body = mgrDashboard(u);
 
   app.innerHTML = topbar(u) + `
@@ -1086,6 +1088,41 @@ function performanceData(owner, from, to) {
     (m.task.assignedUserIds || []).forEach((id) => { if (stats[id]) stats[id].missed++; });
   });
   return people.map((p) => ({ user: p, s: stats[p.id] }));
+}
+
+// Müşterinin (yöneticinin) gördüğü paket/fiyat ekranı — i18n ile 6 dilde
+function currentPackageKey() {
+  const pl = orgPlan || {};
+  if (pl.unlimited) return "corp";
+  const m = PACKAGES.find((p) => !p.unlimited &&
+    p.venues === pl.maxVenues && p.staff === pl.maxStaff && p.chefs === pl.maxChefs);
+  return m ? m.key : null;
+}
+
+function packagesView(u) {
+  const curKey = currentPackageKey();
+  const cards = PACKAGES.map((p) => {
+    const cur = p.key === curKey;
+    const feats = p.unlimited
+      ? `<li>📍 Sınırsız</li><li>👨‍🍳 Sınırsız</li><li>👥 Sınırsız</li>`
+      : `<li>📍 ${p.venues} Mekan</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`;
+    const price = p.price === "$0" ? "$0" : p.price.replace("/ay", "<span class='pkg-per'>/ay</span>");
+    return `
+      <div class="pkg-card pkg-${p.key} ${cur ? "current" : ""}">
+        ${cur ? `<div class="pkg-cur-badge">Mevcut Paketiniz</div>` : ""}
+        <div class="pkg-name">${p.name}</div>
+        <div class="pkg-price">${price}</div>
+        <ul class="pkg-feats">${feats}</ul>
+      </div>`;
+  }).join("");
+  return `
+    <div class="section-title">💎 Paketler</div>
+    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.</p>
+    <div class="pkg-grid">${cards}</div>
+    <div class="card" style="margin-top:14px;text-align:center">
+      Paket yükseltmek için <strong>${SUPER_EMAIL}</strong> ile iletişime geçin.
+    </div>
+  `;
 }
 
 function perfView(u) {
