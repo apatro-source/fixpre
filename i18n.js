@@ -23,6 +23,16 @@ const I18N_ROWS = [
   ["İlk giriş için yönetici hesabı:", "Manager account for first login:", "Manager-Konto für erste Anmeldung:", "Учётная запись администратора для первого входа:", "Cuenta de administrador para el primer acceso:", "Account amministratore per il primo accesso:"],
   ["E-posta", "Email", "E-Mail", "E-mail", "Correo", "E-mail"],
   ["Şifre", "Password", "Passwort", "Пароль", "Contraseña", "Password"],
+  ["Kayıt Ol", "Register", "Registrieren", "Регистрация", "Registrarse", "Registrati"],
+  ["Personel görev yönetimi", "Staff task management", "Personal-Aufgabenverwaltung", "Управление задачами персонала", "Gestión de tareas del personal", "Gestione attività del personale"],
+  ["Şifre (tekrar)", "Password (repeat)", "Passwort (wiederholen)", "Пароль (повтор)", "Contraseña (repetir)", "Password (ripeti)"],
+  ["Adınız Soyadınız", "Your full name", "Ihr Name", "Ваше имя", "Su nombre completo", "Il tuo nome"],
+  ["Yönetici olarak kayıt olun. Şeflerinizi ve personelinizi giriş yaptıktan sonra siz eklersiniz.", "Register as a manager. You add your chefs and staff after signing in.", "Registrieren Sie sich als Manager. Chefs und Personal fügen Sie nach der Anmeldung hinzu.", "Зарегистрируйтесь как менеджер. Шефов и персонал добавите после входа.", "Regístrese como gerente. Añadirá jefes y personal tras iniciar sesión.", "Registrati come manager. Aggiungerai capi e personale dopo l'accesso."],
+  ["Lütfen tüm alanları doldurun.", "Please fill in all fields.", "Bitte alle Felder ausfüllen.", "Заполните все поля.", "Rellene todos los campos.", "Compila tutti i campi."],
+  ["Şifre en az 4 karakter olmalı.", "Password must be at least 4 characters.", "Passwort muss mind. 4 Zeichen haben.", "Пароль не менее 4 символов.", "La contraseña debe tener al menos 4 caracteres.", "La password deve avere almeno 4 caratteri."],
+  ["Bu e-posta zaten kayıtlı.", "This email is already registered.", "Diese E-Mail ist bereits registriert.", "Этот e-mail уже зарегистрирован.", "Este correo ya está registrado.", "Questa e-mail è già registrata."],
+  ["Giriş yapılamadı. Bağlantını kontrol et.", "Login failed. Check your connection.", "Anmeldung fehlgeschlagen. Verbindung prüfen.", "Не удалось войти. Проверьте подключение.", "No se pudo iniciar sesión. Revise su conexión.", "Accesso non riuscito. Controlla la connessione."],
+  ["Kayıt yapılamadı. Bağlantını kontrol et.", "Registration failed. Check your connection.", "Registrierung fehlgeschlagen. Verbindung prüfen.", "Не удалось зарегистрироваться. Проверьте подключение.", "No se pudo registrar. Revise su conexión.", "Registrazione non riuscita. Controlla la connessione."],
 
   // --- Üst bar / roller ---
   ["Çıkış", "Log out", "Abmelden", "Выход", "Salir", "Esci"],

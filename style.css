@@ -108,6 +108,8 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .login-card button { width: 100%; padding: 13px; margin-top: 8px; }
+.login-lang { text-align: right; margin-bottom: 4px; }
+.login-lang select { width: auto; display: inline-block; padding: 6px 10px; font-size: 13px; border-radius: 8px; border-width: 1px; }
 .auth-tabs { display: flex; gap: 6px; background: #eef1f8; padding: 5px; border-radius: 12px; margin-bottom: 20px; }
 .auth-tab {
   flex: 1; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 14px;

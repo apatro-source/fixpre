@@ -460,10 +460,13 @@ function scrollActiveTabIntoView() {
   }
 }
 
-// Render sonrası ekranı kullanıcının diline çevir
+// Giriş yapılmadan önce seçilen dil (misafir dili)
+function guestLang() { return localStorage.getItem("fixpre_lang") || "tr"; }
+
+// Render sonrası ekranı kullanıcının (veya giriş öncesi misafir) diline çevir
 function translateUI() {
   const u = currentUser();
-  const lang = (u && u.lang) || "tr";
+  const lang = u ? (u.lang || "tr") : guestLang();
   if (typeof translateNode === "function") translateNode(app, lang);
 }
 
@@ -555,9 +558,13 @@ function renderLogin() {
         <button class="btn-primary" id="registerBtn">Kayıt Ol</button>
       `;
 
+  const gl = guestLang();
+  const langSel = LANGS.map(([k, l]) => `<option value="${k}" ${gl === k ? "selected" : ""}>${l}</option>`).join("");
+
   app.innerHTML = `
     <div class="login-wrap">
       <div class="login-card">
+        <div class="login-lang"><select id="login_lang">${langSel}</select></div>
         <h1>✅ Fixpre</h1>
         <div class="sub">Personel görev yönetimi</div>
         <div class="domain">fixpre.com</div>
@@ -570,6 +577,11 @@ function renderLogin() {
       </div>
     </div>
   `;
+
+  document.getElementById("login_lang").onchange = (e) => {
+    localStorage.setItem("fixpre_lang", e.target.value);
+    render();
+  };
 
   document.querySelectorAll(".auth-tab").forEach((t) => {
     t.onclick = () => { authMode = t.dataset.auth; render(); };
@@ -611,6 +623,8 @@ function renderLogin() {
       err.textContent = ""; btn.disabled = true;
       try {
         await doRegister(name, email, pw);
+        const me = currentUser();
+        if (me && guestLang() !== "tr") { me.lang = guestLang(); saveDB(DB); } // seçilen dili uygula
         activeTab = "bugun"; staffTab = "bugun";
         render();
       } catch (e) {
