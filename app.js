@@ -2732,18 +2732,22 @@ function cloudPush(db) {
 
 async function cloudBootstrap() {
   cloudEnabled = true;
+  render();         // önbellekteki (en son) veriyle ekranı HEMEN göster — beklemesin
   if (authToken()) {
     try {
       const res = await dataGet();
       if (res && res.plan) orgPlan = res.plan;
-      if (res && res.data) { DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt; }
+      if (res && res.data) {
+        DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt;
+        render();   // taze veri gelince arka planda yenile
+      }
     } catch (e) {
       if (String(e.message) === "401") { // token geçersiz/süresi dolmuş -> çıkış
         localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(UID_KEY); DB = emptyDB();
+        render();
       }
     }
   }
-  render();         // giriş yoksa login ekranı
   startPolling();
 }
 
