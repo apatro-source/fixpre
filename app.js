@@ -390,6 +390,7 @@ function pastMissedFor(tasks, fromStr, toStr) {
 
 /* ---------------- UI durumu ---------------- */
 
+let authMode = "login";           // giriş ekranı: "login" | "register"
 let activeTab = "bugun";          // yönetici sekmesi
 let staffTab = "bugun";           // personel sekmesi
 let logFrom = "", logTo = "";     // yönetici kayıtlar tarih aralığı
@@ -462,44 +463,105 @@ function mountProfile(u) {
 
 /* --- Giriş ekranı --- */
 function renderLogin() {
+  const isLogin = authMode !== "register";
+  const formHtml = isLogin ? `
+        <div class="field">
+          <label>E-posta</label>
+          <input id="email" type="email" placeholder="ornek@firma.com" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label>Şifre</label>
+          <input id="password" type="password" placeholder="••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" id="loginBtn">Giriş Yap</button>
+      ` : `
+        <p class="auth-note">Yönetici olarak kayıt olun. Şeflerinizi ve personelinizi giriş yaptıktan sonra siz eklersiniz.</p>
+        <div class="field">
+          <label>Ad Soyad</label>
+          <input id="r_name" placeholder="Adınız Soyadınız" />
+        </div>
+        <div class="field">
+          <label>E-posta</label>
+          <input id="r_email" type="email" placeholder="ornek@firma.com" autocomplete="username" />
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Şifre</label>
+            <input id="r_pw" type="password" placeholder="••••••" autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label>Şifre (tekrar)</label>
+            <input id="r_pw2" type="password" placeholder="••••••" autocomplete="new-password" />
+          </div>
+        </div>
+        <button class="btn-primary" id="registerBtn">Kayıt Ol</button>
+      `;
+
   app.innerHTML = `
     <div class="login-wrap">
       <div class="login-card">
         <h1>✅ Fixpre</h1>
-        <div class="sub">Personel görev yönetimi — giriş yapın</div>
+        <div class="sub">Personel görev yönetimi</div>
         <div class="domain">fixpre.com</div>
-        <div class="field">
-          <label>E-posta</label>
-          <input id="email" type="email" placeholder="ornek@local" autocomplete="username" />
+        <div class="auth-tabs">
+          <button class="auth-tab ${isLogin ? "active" : ""}" data-auth="login">Giriş Yap</button>
+          <button class="auth-tab ${!isLogin ? "active" : ""}" data-auth="register">Kayıt Ol</button>
         </div>
-        <div class="field">
-          <label>Şifre</label>
-          <input id="password" type="password" placeholder="••••" autocomplete="current-password" />
-        </div>
-        <button class="btn-primary" id="loginBtn">Giriş Yap</button>
+        ${formHtml}
         <div class="error-msg" id="loginErr"></div>
-        <div class="hint">
-          <strong>İlk giriş için yönetici hesabı:</strong><br/>
-          E-posta: <b>yonetici@local</b> &nbsp;•&nbsp; Şifre: <b>1234</b>
-        </div>
       </div>
     </div>
   `;
-  const tryLogin = () => {
-    const email = document.getElementById("email").value;
-    const pw = document.getElementById("password").value;
-    if (login(email, pw)) {
+
+  document.querySelectorAll(".auth-tab").forEach((t) => {
+    t.onclick = () => { authMode = t.dataset.auth; render(); };
+  });
+
+  if (isLogin) {
+    const tryLogin = () => {
+      const email = document.getElementById("email").value;
+      const pw = document.getElementById("password").value;
+      if (login(email, pw)) {
+        activeTab = "bugun";
+        staffTab = "bugun";
+        render();
+      } else {
+        document.getElementById("loginErr").textContent = "E-posta veya şifre hatalı.";
+      }
+    };
+    document.getElementById("loginBtn").onclick = tryLogin;
+    document.getElementById("password").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryLogin();
+    });
+  } else {
+    const tryRegister = () => {
+      const name = document.getElementById("r_name").value.trim();
+      const email = document.getElementById("r_email").value.trim();
+      const pw = document.getElementById("r_pw").value;
+      const pw2 = document.getElementById("r_pw2").value;
+      const err = document.getElementById("loginErr");
+      if (!name || !email || !pw) { err.textContent = "Lütfen tüm alanları doldurun."; return; }
+      if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+      if (pw !== pw2) { err.textContent = "Şifreler uyuşmuyor."; return; }
+      if (DB.users.some((x) => x.email.toLowerCase() === email.toLowerCase())) {
+        err.textContent = "Bu e-posta zaten kayıtlı."; return;
+      }
+      const id = uid();
+      DB.users.push({
+        id, role: "yonetici", name, email, password: pw,
+        ownerId: id, managerId: null, venueIds: [], lang: "tr",
+      });
+      saveDB(DB);
+      sessionStorage.setItem(SESSION_KEY, id);
       activeTab = "bugun";
       staffTab = "bugun";
       render();
-    } else {
-      document.getElementById("loginErr").textContent = "E-posta veya şifre hatalı.";
-    }
-  };
-  document.getElementById("loginBtn").onclick = tryLogin;
-  document.getElementById("password").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") tryLogin();
-  });
+    };
+    document.getElementById("registerBtn").onclick = tryRegister;
+    document.getElementById("r_pw2").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tryRegister();
+    });
+  }
 }
 
 /* --- Üst bar --- */

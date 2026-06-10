@@ -108,6 +108,14 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .login-card button { width: 100%; padding: 13px; margin-top: 8px; }
+.auth-tabs { display: flex; gap: 6px; background: #eef1f8; padding: 5px; border-radius: 12px; margin-bottom: 20px; }
+.auth-tab {
+  flex: 1; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 14px;
+  background: transparent; color: var(--muted); cursor: pointer; border: none;
+}
+.auth-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 6px rgba(99,102,241,.18); }
+.auth-note { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+.login-card .row { gap: 10px; }
 .hint {
   margin-top: 20px; padding: 13px; background: #f4f1ff;
   border: 1px dashed #c7befb; border-radius: 12px; font-size: 12px; color: #5b5276;
