@@ -404,6 +404,7 @@ let staffTab = "bugun";           // personel sekmesi
 let logFrom = "", logTo = "";     // yönetici kayıtlar tarih aralığı
 let histFrom = "", histTo = "";   // personel geçmiş tarih aralığı
 let dashFrom = "", dashTo = "";   // pano geciken görevler tarih aralığı
+let perfFrom = "", perfTo = "";   // performans tarih aralığı
 let selectedVenue = null;         // yöneticinin açtığı mekan (kategori)
 let selectedChef = null;          // yöneticinin açtığı şef detayı
 let editingStaff = null;          // düzenlenen personel/şef id'si
@@ -626,6 +627,7 @@ function renderManager(u) {
         ["sefler", "Şefler"],
         ["mekanlar", "Mekanlar"],
         ["personel", "Personel"],
+        ["performans", "Performans"],
         ["bildirim", bildirimLabel],
         ["izin", izinLabel],
         ["kayitlar", "Kayıtlar"],
@@ -653,6 +655,7 @@ function renderManager(u) {
   else if (activeTab === "kayitlar") body = mgrLog(u);
   else if (activeTab === "bildirim") body = reportsView(u);
   else if (activeTab === "izin") body = leavesView(u);
+  else if (activeTab === "performans") body = perfView(u);
   else body = mgrDashboard(u);
 
   app.innerHTML = topbar(u) + `
@@ -685,6 +688,7 @@ function renderManager(u) {
   else if (activeTab === "kayitlar") wireRange("log", (v) => logFrom = v, (v) => logTo = v);
   else if (activeTab === "bildirim") wireReports(u);
   else if (activeTab === "izin") wireLeaves(u);
+  else if (activeTab === "performans") wireRange("perf", (v) => perfFrom = v, (v) => perfTo = v);
   else wireDashboard(u);
 
   if (editingTask) wireTaskEdit(u);
@@ -903,6 +907,78 @@ function wireDashboard(u) {
   wireReports(u);
   wireAnnouncements(u);
   if (u.role === "sef") wireChefAssigned(u); // panodaki "Bana Atanan" görevleri için
+}
+
+/* ============================================================
+   PERSONEL PERFORMANSI (yalnızca yönetici)
+   ============================================================ */
+// Bir tamamlama zamanında mı yapıldı?
+function perfOnTime(t, dateKey, at) {
+  if (dateKey === "once") {
+    if (!t.dueAt) return true;             // son tarihi yoksa zamanında say
+    return new Date(at) <= new Date(t.dueAt);
+  }
+  return ymd(new Date(at)) <= dateKey;     // o günde veya öncesinde yapıldıysa zamanında
+}
+
+function performanceData(owner, from, to) {
+  const people = [...orgChefs(owner), ...orgStaff(owner)];
+  const stats = {};
+  people.forEach((p) => { stats[p.id] = { completed: 0, onTime: 0, late: 0, missed: 0 }; });
+  const tasks = orgTasks(owner);
+  tasks.forEach((t) => {
+    Object.keys(t.completions).forEach((dateKey) => {
+      const c = t.completions[dateKey];
+      if (!c || !c.by || !stats[c.by] || !inRange(c.at, from, to)) return;
+      stats[c.by].completed++;
+      if (perfOnTime(t, dateKey, c.at)) stats[c.by].onTime++; else stats[c.by].late++;
+    });
+  });
+  // ekipçe yapılmamış (geciken) görevleri sorumlu kişilere yaz
+  pastMissedFor(tasks, from, to).forEach((m) => {
+    (m.task.assignedUserIds || []).forEach((id) => { if (stats[id]) stats[id].missed++; });
+  });
+  return people.map((p) => ({ user: p, s: stats[p.id] }));
+}
+
+function perfView(u) {
+  const owner = ownerIdOf(u);
+  const data = performanceData(owner, perfFrom, perfTo)
+    .sort((a, b) => b.s.completed - a.s.completed);
+
+  const rows = data.length ? data.map((r) => {
+    const s = r.s;
+    const vNames = (r.user.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
+    const pct = s.completed ? Math.round((s.onTime / s.completed) * 100) : null;
+    const pctCls = pct === null ? "bal-zero" : (pct >= 80 ? "bal-green" : pct >= 50 ? "bal-amber" : "bal-red");
+    return `<tr>
+      <td>${roleIcon(r.user)} ${esc(r.user.name)}</td>
+      <td>${vNames.length ? esc(vNames.join(", ")) : "—"}</td>
+      <td><strong>${s.completed}</strong></td>
+      <td style="color:#059669;font-weight:700">${s.onTime}</td>
+      <td style="color:#d97706;font-weight:700">${s.late}</td>
+      <td style="color:#b91c1c;font-weight:700">${s.missed}</td>
+      <td>${pct === null ? "—" : `<span class="bal ${pctCls}">%${pct}</span>`}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7" class="empty">Henüz kişi yok.</td></tr>`;
+
+  return rangeFilter("perf", perfFrom, perfTo) + `
+    <div class="card">
+      <h2>📊 Personel Performansı</h2>
+      <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">
+        <strong>Tamamladığı</strong>: kişinin bizzat tamamladığı görev sayısı ·
+        <strong>Zamanında</strong>: gününde/erken ·
+        <strong>Geç</strong>: sonradan ·
+        <strong>Geciken</strong>: ekipçe hiç yapılmamış (sorumlu olduğu) ·
+        <strong>%</strong>: zamanında oranı.
+      </p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Kişi</th><th>Mekan</th><th>Tamamladığı</th><th>Zamanında</th><th>Geç</th><th>Geciken</th><th>Zamanında %</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // Görev kartı butonlarını bağlar (Bugün, Tüm Görevler ve mekan detayında kullanılır)

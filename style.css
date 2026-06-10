@@ -388,6 +388,7 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 }
 .bal-green { background: #d1fae5; color: #065f46; }
 .bal-red { background: #fee2e2; color: #b91c1c; }
+.bal-amber { background: #fef3c7; color: #b45309; }
 .bal-zero { background: #eef1f8; color: #475069; }
 .balance-card {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
