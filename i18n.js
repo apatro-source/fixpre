@@ -45,6 +45,8 @@ const I18N_ROWS = [
   ["Gelen Talepler — Açık (", "Incoming Requests — Open (", "Eingehende Anfragen — Offen (", "Входящие запросы — Открытые (", "Solicitudes entrantes — Abiertas (", "Richieste in arrivo — Aperte ("],
   ["Çözülen Talepler", "Resolved Requests", "Gelöste Anfragen", "Решённые запросы", "Solicitudes resueltas", "Richieste risolte"],
   ["Gönderdiğim Talepler (", "My Requests (", "Meine Anfragen (", "Мои запросы (", "Mis solicitudes (", "Le mie richieste ("],
+  ["Bu aralıkta bekleyen talep yok.", "No pending requests in this range.", "Keine offenen Anfragen in diesem Zeitraum.", "Нет ожидающих запросов в этом диапазоне.", "No hay solicitudes pendientes en este rango.", "Nessuna richiesta in sospeso in questo intervallo."],
+  ["Bu aralıkta talep yok.", "No requests in this range.", "Keine Anfragen in diesem Zeitraum.", "Нет запросов в этом диапазоне.", "No hay solicitudes en este rango.", "Nessuna richiesta in questo intervallo."],
   ["Bildirimler", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
   ["Bildirim", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
 

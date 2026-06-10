@@ -428,6 +428,7 @@ let logFrom = "", logTo = "";     // yönetici kayıtlar tarih aralığı
 let histFrom = "", histTo = "";   // personel geçmiş tarih aralığı
 let dashFrom = "", dashTo = "";   // pano geciken görevler tarih aralığı
 let perfFrom = "", perfTo = "";   // performans tarih aralığı
+let repFrom = "", repTo = "";     // talepler tarih aralığı
 let selectedVenue = null;         // yöneticinin açtığı mekan (kategori)
 let selectedChef = null;          // yöneticinin açtığı şef detayı
 let editingStaff = null;          // düzenlenen personel/şef id'si
@@ -1892,22 +1893,24 @@ function reportCreateForm(u) {
 function reportsView(u) {
   markReportsSeen(u);
   const byDate = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
+  const inRng = (r) => inRange(r.createdAt, repFrom, repTo);
   const canResolve = u.role === "yonetici" || u.role === "sef";
-  const incoming = incomingReports(u).slice().sort(byDate);
+  const incoming = incomingReports(u).filter(inRng).slice().sort(byDate);
   const incOpen = incoming.filter((r) => r.status === "acik");
   const incDone = incoming.filter((r) => r.status === "cozuldu");
-  const mine = (u.role !== "yonetici") ? myReports(u).slice().sort(byDate) : [];
+  const mine = (u.role !== "yonetici") ? myReports(u).filter(inRng).slice().sort(byDate) : [];
 
   return `
     ${u.role !== "yonetici" ? reportCreateForm(u) : ""}
+    ${rangeFilter("talep", repFrom, repTo)}
     ${canResolve ? `
       <div class="section-title">Gelen Talepler — Açık (${incOpen.length})</div>
-      ${incOpen.length ? incOpen.map((r) => reportCard(u, r, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}
+      ${incOpen.length ? incOpen.map((r) => reportCard(u, r, true)).join("") : `<div class="empty">Bu aralıkta bekleyen talep yok.</div>`}
       ${incDone.length ? `<details class="cat" style="margin-top:14px"><summary><span>✅ Çözülen Talepler</span><span class="cat-count">${incDone.length}</span></summary><div class="cat-body" style="padding-top:12px">${incDone.map((r) => reportCard(u, r, false)).join("")}</div></details>` : ""}
     ` : ""}
-    ${mine.length ? `
+    ${(u.role !== "yonetici") ? `
       <div class="section-title">Gönderdiğim Talepler (${mine.length})</div>
-      ${mine.map((r) => reportCard(u, r, false)).join("")}
+      ${mine.length ? mine.map((r) => reportCard(u, r, false)).join("") : `<div class="empty">Bu aralıkta talep yok.</div>`}
     ` : ""}
   `;
 }
@@ -1932,6 +1935,7 @@ function resolvedBanner(u) {
 }
 
 function wireReports(u) {
+  wireRange("talep", (v) => repFrom = v, (v) => repTo = v);
   const sendBtn = document.getElementById("rep_send");
   if (sendBtn) sendBtn.onclick = () => {
     const category = document.getElementById("rep_cat").value;
