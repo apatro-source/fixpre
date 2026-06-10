@@ -1184,18 +1184,21 @@ function mgrTaskCard(t) {
     if (lu && (!c || new Date(lu.at) > new Date(c.at))) {
       rows += `<div class="undo-note">↩️ ${esc(lu.byName || "?")} ${fmtDate(lu.at)} tarihinde tamamlamayı geri aldı</div>`;
     }
-    // okunma durumu (her atanan kişi için)
+    // okunma durumu (tıklayınca açılır — yer kaplamasın)
     const readMap = (t.reads && t.reads[key]) || {};
+    const readCount = t.assignedUserIds.filter((id) => readMap[id]).length;
     readsHtml = `
-      <div class="status-line"><strong>Okunma durumu:</strong></div>
-      ${t.assignedUserIds.map((id) => {
-        const who = userById(id);
-        const r = readMap[id];
-        return `<div class="completion-row">
-          <span>${roleIcon(who)} ${esc(who ? who.name : "Silinmiş")}</span>
-          ${r ? `<span class="seen">👁 okundu — ${fmtDate(r)}</span>` : `<span class="wait">• henüz görmedi</span>`}
-        </div>`;
-      }).join("")}`;
+      <details class="reads-toggle">
+        <summary>👁 Okunma durumu (${readCount}/${t.assignedUserIds.length})</summary>
+        ${t.assignedUserIds.map((id) => {
+          const who = userById(id);
+          const r = readMap[id];
+          return `<div class="completion-row">
+            <span>${roleIcon(who)} ${esc(who ? who.name : "Silinmiş")}</span>
+            ${r ? `<span class="seen">👁 okundu — ${fmtDate(r)}</span>` : `<span class="wait">• henüz görmedi</span>`}
+          </div>`;
+        }).join("")}
+      </details>`;
   }
 
   return `

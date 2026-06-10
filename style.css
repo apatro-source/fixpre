@@ -235,6 +235,16 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .tag.venue { background: #fff4d6; color: #b45309; }
 .tag.rec { background: #dbf4ff; color: #0369a1; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
+
+/* Okunma durumu — tıklayınca açılır */
+.reads-toggle { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
+.reads-toggle > summary {
+  cursor: pointer; font-size: 13px; font-weight: 700; color: var(--muted);
+  list-style: none; display: flex; align-items: center;
+}
+.reads-toggle > summary::-webkit-details-marker { display: none; }
+.reads-toggle > summary::after { content: "▸"; margin-left: 6px; color: var(--muted); font-size: 11px; transition: transform .15s; }
+.reads-toggle[open] > summary::after { transform: rotate(90deg); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .dot.green { background: var(--green); }
 .dot.amber { background: var(--amber); }
