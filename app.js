@@ -129,6 +129,9 @@ async function doLogin(email, password) {
   localStorage.setItem(TOKEN_KEY, j.token);
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
+  // giriş ekranında seçilen dili kullanıcıya uygula (menü o dilde gelsin)
+  const me = DB.users.find((x) => x.id === j.userId);
+  if (me && me.lang !== guestLang()) { me.lang = guestLang(); saveDB(DB); }
   saveLocal(DB);
 }
 
@@ -512,6 +515,7 @@ function mountProfile(u) {
       if (pw) { await authCall({ action: "setPassword", password: pw }); } // kendi şifresi
       u.name = name;
       u.lang = lang;
+      localStorage.setItem("fixpre_lang", lang); // cihaz dili de güncel kalsın
       saveDB(DB);
       showProfile = false;
       render();
