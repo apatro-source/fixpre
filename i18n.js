@@ -214,6 +214,15 @@ const I18N_ROWS = [
 
   // --- İzin / Mesai ---
   ["📨 İzin / Mesai Talebi", "📨 Leave / Hours Request", "📨 Urlaub / Stunden anfragen", "📨 Запрос отпуска / часов", "📨 Solicitud de permiso / horas", "📨 Richiesta permesso / ore"],
+  ["Yıllık İzin (tarih aralığı)", "Annual Leave (date range)", "Jahresurlaub (Zeitraum)", "Ежегодный отпуск (период)", "Vacaciones anuales (rango)", "Ferie annuali (intervallo)"],
+  ["Yıllık İzin Hakkınız", "Your Annual Leave", "Ihr Jahresurlaub", "Ваш ежегодный отпуск", "Sus vacaciones anuales", "Le tue ferie annuali"],
+  ["Yıllık izin hakkı (gün)", "Annual leave (days)", "Jahresurlaub (Tage)", "Ежегодный отпуск (дни)", "Vacaciones anuales (días)", "Ferie annuali (giorni)"],
+  ["Başlangıç ve bitiş tarihi seçin.", "Select start and end dates.", "Start- und Enddatum wählen.", "Выберите даты начала и конца.", "Seleccione fechas de inicio y fin.", "Seleziona date di inizio e fine."],
+  ["Bitiş tarihi başlangıçtan önce olamaz.", "End date can't be before start.", "Enddatum darf nicht vor Start liegen.", "Дата конца не может быть раньше начала.", "La fecha de fin no puede ser anterior al inicio.", "La fine non può precedere l'inizio."],
+  [" gün · Kalan günlerinizi tarih aralığı seçerek kullanabilirsiniz.", " days · Use your remaining days by selecting a date range.", " Tage · Resttage über einen Zeitraum nutzen.", " дн. · Используйте оставшиеся дни, выбрав период.", " días · Use sus días restantes eligiendo un rango.", " giorni · Usa i giorni rimanenti scegliendo un intervallo."],
+  ["Kullanılan: ", "Used: ", "Verbraucht: ", "Использовано: ", "Usado: ", "Usato: "],
+  ["🗓️ İzin: kalan ", "🗓️ Leave: remaining ", "🗓️ Urlaub: Rest ", "🗓️ Отпуск: остаток ", "🗓️ Permiso: resta ", "🗓️ Ferie: restano "],
+  [" gün (kullanılan ", " days (used ", " Tage (verbraucht ", " дн. (использовано ", " días (usado ", " giorni (usato "],
   ["İzin Talebi", "Leave Request", "Urlaubsantrag", "Запрос отпуска", "Solicitud de permiso", "Richiesta di permesso"],
   ["Geç Geleceğim", "I'll be late", "Ich komme später", "Опоздаю", "Llegaré tarde", "Arriverò in ritardo"],
   ["Telafi Edeceğim (fazla mesai ile)", "I'll compensate (with overtime)", "Ich gleiche aus (mit Überstunden)", "Отработаю (сверхурочно)", "Compensaré (con horas extra)", "Recupererò (con straordinari)"],

@@ -1344,6 +1344,7 @@ function staffAddForm(venues) {
         <div class="field"><label>E-posta (giriş için)</label><input id="s_email" placeholder="ahmet@local" /></div>
       </div>
       <div class="field"><label>Şifre (giriş için)</label><input id="s_pw" placeholder="Personele verilecek şifre" /></div>
+      <div class="field"><label>Yıllık izin hakkı (gün)</label><input id="s_leavedays" type="number" min="0" value="0" /></div>
       <div class="field">
         <label>Görevli olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, [], "s_venue")}</div>
@@ -1362,6 +1363,7 @@ function staffEditForm(s, venues) {
         <div class="field"><label>E-posta</label><input id="e_email" value="${esc(s.email)}" /></div>
       </div>
       <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="e_pw" type="text" placeholder="••••" /></div>
+      <div class="field"><label>Yıllık izin hakkı (gün)</label><input id="e_leavedays" type="number" min="0" value="${Number(s.leaveDays) || 0}" /></div>
       <div class="field">
         <label>Görevli olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, s.venueIds, "e_venue")}</div>
@@ -1425,9 +1427,10 @@ function wireMgrStaff(u) {
     addBtn.disabled = true; err.textContent = "";
     try {
       const j = await authCall({ action: "createUser", role: "personel", name, email, password: pw });
+      const leaveDays = parseInt(document.getElementById("s_leavedays").value, 10) || 0;
       DB.users.push({
         id: j.userId, role: "personel", name, email,
-        ownerId: ownerIdOf(u), chefId: u.role === "sef" ? u.id : null, venueIds, lang: "tr",
+        ownerId: ownerIdOf(u), chefId: u.role === "sef" ? u.id : null, venueIds, lang: "tr", leaveDays,
       });
       saveDB(DB);
       render();
@@ -1466,6 +1469,8 @@ function wireMgrStaff(u) {
         });
       }
       s.name = name; s.email = email; s.venueIds = venueIds;
+      const ld = document.getElementById("e_leavedays");
+      if (ld) s.leaveDays = parseInt(ld.value, 10) || 0;
       saveDB(DB);
       editingStaff = null;
       render();
@@ -1661,6 +1666,7 @@ function chefAddForm(venues) {
         <div class="field"><label>E-posta (giriş için)</label><input id="cf_email" placeholder="mehmet@local" /></div>
       </div>
       <div class="field"><label>Şifre (giriş için)</label><input id="cf_pw" placeholder="Şefe verilecek şifre" /></div>
+      <div class="field"><label>Yıllık izin hakkı (gün)</label><input id="cf_leavedays" type="number" min="0" value="0" /></div>
       <div class="field">
         <label>Sorumlu olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, [], "cf_venue")}</div>
@@ -1679,6 +1685,7 @@ function chefEditForm(c, venues) {
         <div class="field"><label>E-posta</label><input id="ce_email" value="${esc(c.email)}" /></div>
       </div>
       <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="ce_pw" type="text" placeholder="••••" /></div>
+      <div class="field"><label>Yıllık izin hakkı (gün)</label><input id="ce_leavedays" type="number" min="0" value="${Number(c.leaveDays) || 0}" /></div>
       <div class="field">
         <label>Sorumlu olduğu mekanlar</label>
         <div class="checks">${venueCheckHtml(venues, c.venueIds, "ce_venue")}</div>
@@ -1781,7 +1788,8 @@ function wireMgrChefs(u) {
     addBtn.disabled = true; err.textContent = "";
     try {
       const j = await authCall({ action: "createUser", role: "sef", name, email, password: pw });
-      DB.users.push({ id: j.userId, role: "sef", name, email, ownerId: owner, venueIds, lang: "tr" });
+      const leaveDays = parseInt(document.getElementById("cf_leavedays").value, 10) || 0;
+      DB.users.push({ id: j.userId, role: "sef", name, email, ownerId: owner, venueIds, lang: "tr", leaveDays });
       saveDB(DB);
       render();
     } catch (e) {
@@ -1811,6 +1819,8 @@ function wireMgrChefs(u) {
       }
       if (pw) { await authCall({ action: "setPassword", userId: c.id, password: pw }); }
       c.name = name; c.email = email; c.venueIds = venueIds;
+      const cld = document.getElementById("ce_leavedays");
+      if (cld) c.leaveDays = parseInt(cld.value, 10) || 0;
       saveDB(DB);
       editingStaff = null;
       render();
@@ -2068,6 +2078,7 @@ function wireReports(u) {
    İZİN / MESAİ talepleri
    ============================================================ */
 const LEAVE_CATS = [
+  { key: "yillikizin", label: "Yıllık İzin (tarih aralığı)", icon: "🗓️" },
   { key: "izin", label: "İzin Talebi", icon: "🏖️" },
   { key: "gecikme", label: "Geç Geleceğim", icon: "⏰" },
   { key: "telafi", label: "Telafi Edeceğim (fazla mesai ile)", icon: "🔁" },
@@ -2079,6 +2090,23 @@ const WORKDAY_HOURS = 8;   // izin günlerini saate çevirmek için (1 gün = 8 
 
 function orgLeaves(o) { return DB.leaves.filter((l) => l.ownerId === o); }
 function myLeaves(u) { return orgLeaves(ownerIdOf(u)).filter((l) => l.createdBy === u.id); }
+
+// İki tarih arası gün sayısı (her iki uç dahil)
+function daysBetween(s, e) {
+  const a = new Date(s + "T00:00:00"), b = new Date(e + "T00:00:00");
+  if (isNaN(a) || isNaN(b) || b < a) return 0;
+  return Math.round((b - a) / 86400000) + 1;
+}
+// Onaylanmış yıllık izinlerde kullanılan gün
+function usedLeaveDays(userId, owner) {
+  return orgLeaves(owner)
+    .filter((l) => l.createdBy === userId && l.category === "yillikizin" && l.status === "onaylandi")
+    .reduce((s, l) => s + (Number(l.days) || 0), 0);
+}
+// Kalan yıllık izin = hak − kullanılan
+function leaveRemaining(user, owner) {
+  return (Number(user && user.leaveDays) || 0) - usedLeaveDays(user.id, owner);
+}
 
 // Onaylanmış taleplerin mesai dengesine etkisi (saat). + alacak, − borç
 // İzin & gecikme -> eksik (−), telafi & fazla mesai -> fazla (+)
@@ -2118,9 +2146,11 @@ function leaveCard(u, l, canDecide) {
   const who = userById(l.createdBy);
   const pending = l.status === "beklemede";
   const approved = l.status === "onaylandi";
-  const amount = l.category === "izin"
-    ? `${l.days || 0} gün ${l.hours || 0} saat`
-    : `${l.hours || 0} saat`;
+  const amount = l.category === "yillikizin"
+    ? `${l.days || 0} gün · ${l.startDate ? fmtDay(l.startDate) : "?"} – ${l.endDate ? fmtDay(l.endDate) : "?"}`
+    : l.category === "izin"
+      ? `${l.days || 0} gün ${l.hours || 0} saat`
+      : `${l.hours || 0} saat`;
   const statusBadge = pending ? `<span class="badge badge-open">Beklemede</span>`
     : approved ? `<span class="badge badge-done">Onaylandı</span>`
     : `<span class="badge badge-rej">Reddedildi</span>`;
@@ -2147,8 +2177,12 @@ function leaveCreateForm(u) {
   return `
     <div class="card">
       <h2>📨 İzin / Mesai Talebi</h2>
-      <div class="row">
-        <div class="field"><label>Tür</label><select id="lv_cat">${cats}</select></div>
+      <div class="field"><label>Tür</label><select id="lv_cat">${cats}</select></div>
+      <div class="row" id="lv_range_f" style="display:none">
+        <div class="field"><label>Başlangıç</label><input id="lv_start" type="date" /></div>
+        <div class="field"><label>Bitiş</label><input id="lv_end" type="date" /></div>
+      </div>
+      <div class="row" id="lv_hours_f">
         <div class="field" id="lv_days_f"><label>Gün</label><input id="lv_days" type="number" min="0" value="0" /></div>
         <div class="field"><label>Saat</label><input id="lv_hours" type="number" min="0" step="0.5" value="0" /></div>
         <div class="field"><label>Tarih (opsiyonel)</label><input id="lv_date" type="date" /></div>
@@ -2168,11 +2202,19 @@ function leavesView(u) {
     const pending = orgLeaves(owner).filter((l) => l.status === "beklemede").sort(byDate);
     const decided = orgLeaves(owner).filter((l) => l.status !== "beklemede").sort(byDate);
     const people = [...orgChefs(owner), ...orgStaff(owner)];
-    const balanceRows = people.length ? people.map((p) => `
+    const balanceRows = people.length ? people.map((p) => {
+      const ent = Number(p.leaveDays) || 0;
+      const usedD = usedLeaveDays(p.id, owner);
+      const rem = ent - usedD;
+      return `
       <div class="list-item">
-        <div><div class="title">${roleIcon(p)} ${esc(p.name)}</div></div>
+        <div>
+          <div class="title">${roleIcon(p)} ${esc(p.name)}</div>
+          <div class="meta">🗓️ İzin: kalan ${rem} / ${ent} gün (kullanılan ${usedD})</div>
+        </div>
         ${balanceBadge(mesaiBalance(p.id, owner))}
-      </div>`).join("") : `<div class="empty">Kişi yok.</div>`;
+      </div>`;
+    }).join("") : `<div class="empty">Kişi yok.</div>`;
     return `
       <div class="section-title">Bekleyen Talepler (${pending.length})</div>
       ${pending.length ? pending.map((l) => leaveCard(u, l, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}
@@ -2186,7 +2228,15 @@ function leavesView(u) {
   // personel / şef
   const mine = myLeaves(u).sort(byDate);
   const bal = mesaiBalance(u.id, owner);
+  const entitlement = Number(u.leaveDays) || 0;
+  const used = usedLeaveDays(u.id, owner);
+  const remaining = entitlement - used;
   return `
+    <div class="card balance-card">
+      <div class="balance-label">Yıllık İzin Hakkınız</div>
+      <span class="bal ${remaining > 0 ? "bal-green" : "bal-zero"}">${remaining} / ${entitlement} gün</span>
+      <div class="meta">Kullanılan: ${used} gün · Kalan günlerinizi tarih aralığı seçerek kullanabilirsiniz.</div>
+    </div>
     <div class="card balance-card">
       <div class="balance-label">Mesai Durumunuz</div>
       ${balanceBadge(bal)}
@@ -2216,8 +2266,14 @@ function wireLeaves(u) {
   const catSel = document.getElementById("lv_cat");
   if (catSel) {
     const sync = () => {
+      const v = catSel.value;
+      const isYillik = v === "yillikizin";
+      const rangeF = document.getElementById("lv_range_f");
+      const hoursF = document.getElementById("lv_hours_f");
+      if (rangeF) rangeF.style.display = isYillik ? "" : "none";
+      if (hoursF) hoursF.style.display = isYillik ? "none" : "";
       const daysF = document.getElementById("lv_days_f");
-      if (daysF) daysF.style.display = catSel.value === "izin" ? "" : "none";
+      if (daysF) daysF.style.display = (v === "izin") ? "" : "none";
     };
     catSel.onchange = sync;
     sync();
@@ -2225,18 +2281,35 @@ function wireLeaves(u) {
   const send = document.getElementById("lv_send");
   if (send) send.onclick = () => {
     const category = document.getElementById("lv_cat").value;
-    const days = category === "izin" ? (parseFloat(document.getElementById("lv_days").value) || 0) : 0;
-    const hours = parseFloat(document.getElementById("lv_hours").value) || 0;
-    const date = document.getElementById("lv_date").value || null;
     const note = document.getElementById("lv_note").value.trim();
     const err = document.getElementById("lv_err");
-    if (!days && !hours) { err.textContent = "Gün veya saat girin."; return; }
-    DB.leaves.push({
-      id: uid(), ownerId: ownerIdOf(u), createdBy: u.id,
-      category, days, hours, date, note, status: "beklemede",
-      createdAt: new Date().toISOString(),
-      decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
-    });
+
+    if (category === "yillikizin") {
+      const startDate = document.getElementById("lv_start").value;
+      const endDate = document.getElementById("lv_end").value;
+      if (!startDate || !endDate) { err.textContent = "Başlangıç ve bitiş tarihi seçin."; return; }
+      const days = daysBetween(startDate, endDate);
+      if (days <= 0) { err.textContent = "Bitiş tarihi başlangıçtan önce olamaz."; return; }
+      const remaining = leaveRemaining(u, ownerIdOf(u));
+      if (days > remaining) { err.textContent = `Kalan izniniz ${remaining} gün; ${days} gün talep ettiniz.`; return; }
+      DB.leaves.push({
+        id: uid(), ownerId: ownerIdOf(u), createdBy: u.id,
+        category, days, hours: 0, startDate, endDate, date: null, note, status: "beklemede",
+        createdAt: new Date().toISOString(),
+        decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
+      });
+    } else {
+      const days = category === "izin" ? (parseFloat(document.getElementById("lv_days").value) || 0) : 0;
+      const hours = parseFloat(document.getElementById("lv_hours").value) || 0;
+      const date = document.getElementById("lv_date").value || null;
+      if (!days && !hours) { err.textContent = "Gün veya saat girin."; return; }
+      DB.leaves.push({
+        id: uid(), ownerId: ownerIdOf(u), createdBy: u.id,
+        category, days, hours, date, note, status: "beklemede",
+        createdAt: new Date().toISOString(),
+        decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
+      });
+    }
     saveDB(DB);
     notifyUsers([ownerIdOf(u)], "Yeni izin/mesai talebi", u.name, "/");
     render();
