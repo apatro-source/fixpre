@@ -841,6 +841,24 @@ function mgrDashboard(u) {
   const dateStr = new Date().toLocaleDateString(currentLocale(), {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
+
+  // Şefe atanan (kendisinin yapacağı) bugünkü görevler — panoda da göster
+  const myAssigned = (u.role === "sef")
+    ? DB.tasks.filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t))
+        .sort((a, b) => {
+          const ad = !!a.completions[occKeyToday(a)];
+          const bd = !!b.completions[occKeyToday(b)];
+          if (ad !== bd) return ad ? 1 : -1;
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        })
+    : [];
+  if (myAssigned.length) markReads(u, myAssigned);
+  const myPending = myAssigned.filter((t) => !t.completions[occKeyToday(t)]).length;
+  const assignedSection = myAssigned.length ? `
+    <h3 style="margin:0 0 12px">📌 Bana Atanan Görevler (${myPending} bekliyor)</h3>
+    ${myAssigned.map((t) => staffTaskCard(t, u, shareBlock(t, u))).join("")}
+  ` : "";
+
   return `
     ${resolvedBanner(u)}
     ${leaveBanner(u)}
@@ -853,6 +871,7 @@ function mgrDashboard(u) {
       ${statCard("Toplam Görev", all.length, "gray")}
     </div>
 
+    ${assignedSection}
     ${announcementsBoard(u)}
     <details class="cat" style="margin-bottom:18px">
       <summary><span>📢 Duyuru Yap</span></summary>
@@ -878,6 +897,7 @@ function wireDashboard(u) {
   wireRange("dash", (v) => dashFrom = v, (v) => dashTo = v);
   wireReports(u);
   wireAnnouncements(u);
+  if (u.role === "sef") wireChefAssigned(u); // panodaki "Bana Atanan" görevleri için
 }
 
 // Görev kartı butonlarını bağlar (Bugün, Tüm Görevler ve mekan detayında kullanılır)
