@@ -1,0 +1,9 @@
+{
+  "name": "fixpre",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixpre - personel görev yönetimi",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.5"
+  }
+}
