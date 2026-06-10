@@ -608,7 +608,7 @@ function renderLogin() {
     <div class="login-wrap">
       <div class="login-card">
         <div class="login-lang"><select id="login_lang">${langSel}</select></div>
-        <h1>✅ Fixpre</h1>
+        <h1><img class="brand-logo lg" src="icon-192.png" alt="" /> Fixpre</h1>
         <div class="sub">Personel görev yönetimi</div>
         <div class="domain">fixpre.com</div>
         <div class="auth-tabs">
@@ -693,7 +693,7 @@ function topbar(u) {
       : `<span class="badge badge-staff">Personel</span>`;
   return `
     <div class="topbar">
-      <div class="brand">✅ Fixpre</div>
+      <div class="brand"><img class="brand-logo" src="icon-192.png" alt="" /> Fixpre</div>
       <div class="user-info">
         ${roleBadge}
         <span>${esc(u.name)}</span>

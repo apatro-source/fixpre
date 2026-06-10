@@ -96,6 +96,12 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   max-width: 400px;
   box-shadow: 0 18px 50px rgba(99, 102, 241, .18);
 }
+.brand-logo {
+  width: 24px; height: 24px; border-radius: 7px; vertical-align: -6px;
+  margin-right: 6px; box-shadow: 0 2px 6px rgba(99, 102, 241, .35);
+}
+.brand-logo.lg { width: 36px; height: 36px; border-radius: 10px; vertical-align: -9px; }
+
 .login-card h1 {
   font-size: 26px; margin-bottom: 4px;
   background: linear-gradient(135deg, #6366f1, #ec4899);
