@@ -2163,6 +2163,20 @@ function leaveCard(u, l, canDecide) {
     </div>`;
 }
 
+// Kişi detayında tek talep satırı (gün + tür + durum)
+function leaveHistLine(l) {
+  const cat = leaveCat(l.category);
+  const amount = l.category === "izin" ? `${l.days || 0} gün ${l.hours || 0} saat` : `${l.hours || 0} saat`;
+  const when = l.date ? fmtDay(l.date) : fmtDate(l.createdAt);
+  const st = l.status === "beklemede" ? `<span class="badge badge-open">Beklemede</span>`
+    : l.status === "onaylandi" ? `<span class="badge badge-done">Onaylandı</span>`
+    : `<span class="badge badge-rej">Reddedildi</span>`;
+  return `<div class="pl-line">
+    <div><span class="rcat">${cat.icon} ${cat.label}</span> <strong>${amount}</strong>${l.note ? ` — ${esc(l.note)}` : ""}</div>
+    <div class="pl-line-meta">📅 ${when} · ${st}</div>
+  </div>`;
+}
+
 function leaveCreateForm(u) {
   const cats = LEAVE_CATS.map((c) => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join("");
   return `
@@ -2189,11 +2203,20 @@ function leavesView(u) {
     const pending = orgLeaves(owner).filter((l) => l.status === "beklemede").sort(byDate);
     const decided = orgLeaves(owner).filter((l) => l.status !== "beklemede").sort(byDate);
     const people = [...orgChefs(owner), ...orgStaff(owner)];
-    const balanceRows = people.length ? people.map((p) => `
-      <div class="list-item">
-        <div><div class="title">${roleIcon(p)} ${esc(p.name)}</div></div>
-        ${balanceBadge(mesaiBalance(p.id, owner))}
-      </div>`).join("") : `<div class="empty">Kişi yok.</div>`;
+    const balanceRows = people.length ? people.map((p) => {
+      const hist = orgLeaves(owner).filter((l) => l.createdBy === p.id).sort(byDate);
+      const histHtml = hist.length
+        ? hist.map((l) => leaveHistLine(l)).join("")
+        : `<div class="empty" style="margin:6px 0 2px">Bu kişinin talebi yok.</div>`;
+      return `
+      <details class="person-leaves">
+        <summary>
+          <span class="title">${roleIcon(p)} ${esc(p.name)}</span>
+          <span class="pl-right">${balanceBadge(mesaiBalance(p.id, owner))}<span class="pl-count">${hist.length}</span></span>
+        </summary>
+        <div class="pl-body">${histHtml}</div>
+      </details>`;
+    }).join("") : `<div class="empty">Kişi yok.</div>`;
     return `
       <div class="section-title">Bekleyen Talepler (${pending.length})</div>
       ${pending.length ? pending.map((l) => leaveCard(u, l, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}

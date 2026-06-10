@@ -424,6 +424,31 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 .balance-card .balance-label { font-weight: 800; font-size: 16px; }
 .balance-card .meta { font-size: 13px; color: var(--muted); width: 100%; }
 
+/* ---- İzin/Mesai: kişiye tıkla → talep geçmişi ---- */
+.person-leaves {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; overflow: hidden;
+}
+.person-leaves > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 15px;
+}
+.person-leaves > summary::-webkit-details-marker { display: none; }
+.person-leaves > summary::after { content: "▸"; color: var(--muted); margin-left: 4px; transition: transform .15s; }
+.person-leaves[open] > summary::after { transform: rotate(90deg); }
+.person-leaves > summary .title { font-weight: 700; }
+.person-leaves .pl-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.person-leaves .pl-count {
+  background: #eef1f8; color: var(--muted); font-size: 12px; font-weight: 700;
+  border-radius: 999px; padding: 2px 9px; min-width: 22px; text-align: center;
+}
+.person-leaves .pl-body { padding: 4px 15px 12px; border-top: 1px solid var(--border); }
+.pl-line { padding: 9px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+.pl-line:last-child { border-bottom: none; }
+.pl-line .rcat { font-weight: 600; }
+.pl-line-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;
