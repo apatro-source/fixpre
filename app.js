@@ -100,7 +100,7 @@ function migrate(db) {
 let DB = loadDB();
 
 const SUPER_EMAIL = "h.dirmilli48@gmail.com";   // sınırsız + yetki veren hesap
-let orgPlan = { maxVenues: 1, maxStaff: 5, unlimited: false }; // demo varsayılan; sunucudan güncellenir
+let orgPlan = { maxVenues: 1, maxStaff: 4, maxChefs: 1, unlimited: false }; // demo varsayılan; sunucudan güncellenir
 
 /* ---------------- Oturum (güvenli: token + hash) ---------------- */
 const TOKEN_KEY = "fixpre_token";
@@ -499,7 +499,8 @@ function mountProfile(u) {
           <input id="sa_email" placeholder="kullanici@eposta.com" />
           <div class="row" style="margin-top:8px">
             <div class="field"><label>Mekan</label><input id="sa_venues" type="number" min="1" value="1" /></div>
-            <div class="field"><label>Personel</label><input id="sa_staff" type="number" min="1" value="5" /></div>
+            <div class="field"><label>Şef</label><input id="sa_chefs" type="number" min="0" value="1" /></div>
+            <div class="field"><label>Personel</label><input id="sa_staff" type="number" min="1" value="4" /></div>
           </div>
           <label class="check-pill" style="margin-top:8px"><input type="checkbox" id="sa_unlimited" /> Sınırsız</label>
           <button class="btn-ghost" id="sa_grant" style="width:100%;margin-top:10px">Yetkiyi Uygula</button>
@@ -520,13 +521,14 @@ function mountProfile(u) {
   if (grantBtn) grantBtn.onclick = async () => {
     const targetEmail = document.getElementById("sa_email").value.trim();
     const maxVenues = parseInt(document.getElementById("sa_venues").value, 10) || 1;
-    const maxStaff = parseInt(document.getElementById("sa_staff").value, 10) || 5;
+    const maxChefs = parseInt(document.getElementById("sa_chefs").value, 10) || 0;
+    const maxStaff = parseInt(document.getElementById("sa_staff").value, 10) || 4;
     const unlimited = document.getElementById("sa_unlimited").checked;
     const msg = document.getElementById("sa_msg");
     if (!targetEmail) { msg.textContent = "E-posta girin."; return; }
     grantBtn.disabled = true; msg.textContent = "";
     try {
-      await authCall({ action: "setPlan", targetEmail, maxVenues, maxStaff, unlimited });
+      await authCall({ action: "setPlan", targetEmail, maxVenues, maxChefs, maxStaff, unlimited });
       msg.style.color = "#059669";
       msg.textContent = "Yetki uygulandı ✅ (kullanıcı bir sonraki açılışta görür)";
     } catch (e) {
@@ -1772,6 +1774,10 @@ function wireMgrChefs(u) {
     const err = document.getElementById("cf_err");
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
     if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
+    if (!orgPlan.unlimited && orgChefs(owner).length >= orgPlan.maxChefs) {
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      return;
+    }
     addBtn.disabled = true; err.textContent = "";
     try {
       const j = await authCall({ action: "createUser", role: "sef", name, email, password: pw });
@@ -1780,7 +1786,9 @@ function wireMgrChefs(u) {
       render();
     } catch (e) {
       addBtn.disabled = false;
-      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda." : "Eklenemedi (bağlantı?).";
+      err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda."
+        : (String(e.message) === "limit_chef") ? `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`
+        : "Eklenemedi (bağlantı?).";
     }
   };
 

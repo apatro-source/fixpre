@@ -61,6 +61,7 @@ const I18N_ROWS = [
   ["Demo planı: en fazla ", "Demo plan: up to ", "Demo-Plan: bis zu ", "Демо-план: до ", "Plan demo: hasta ", "Piano demo: fino a "],
   [" personel ekleyebilirsiniz. Daha fazlası için ", " staff. For more, contact ", " Mitarbeiter. Für mehr kontaktieren Sie ", " сотрудников. Для большего напишите ", " empleados. Para más, contacte ", " dipendenti. Per altro, contatta "],
   [" mekan ekleyebilirsiniz. Daha fazlası için ", " venues. For more, contact ", " Standorte. Für mehr kontaktieren Sie ", " объектов. Для большего напишите ", " lugares. Para más, contacte ", " sedi. Per altro, contatta "],
+  [" şef ekleyebilirsiniz. Daha fazlası için ", " chefs. For more, contact ", " Chefs. Für mehr kontaktieren Sie ", " шефов. Для большего напишите ", " jefes. Para más, contacte ", " capi. Per altro, contatta "],
   [" ile iletişime geçin.", ".", ".", ".", ".", "."],
   ["Bildirimler", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
   ["Bildirim", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
