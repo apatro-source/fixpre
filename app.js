@@ -2281,19 +2281,13 @@ function staffTaskCard(t, u, extra = "") {
    Yerelde (file://) localStorage modunda çalışır.
    ============================================================ */
 const API_URL = "/api/state";
-const KEY_STORE = "fixpre_key";
+const CLOUD_KEY = "fixpre2026";   // Vercel'deki FIXPRE_KEY ile aynı olmalı
 let cloudEnabled = false;
 let lastAppliedAt = null;
 let pushTimer = null;
 let pushing = false;
 
-function apiKey() { return localStorage.getItem(KEY_STORE) || ""; }
-function setApiKey(k) { localStorage.setItem(KEY_STORE, k); }
-
-function askKeyAndReload() {
-  const k = window.prompt("Fixpre erişim anahtarı (yöneticinizden alın):", "");
-  if (k && k.trim()) { setApiKey(k.trim()); location.reload(); }
-}
+function apiKey() { return CLOUD_KEY; } // anahtar koda gömülü; kullanıcıya sorulmaz
 
 async function apiGet() {
   const r = await fetch(API_URL, { headers: { "x-fixpre-key": apiKey() } });
@@ -2322,18 +2316,13 @@ function cloudPush(db) {
     try {
       const res = await apiPut(JSON.parse(snapshot));
       lastAppliedAt = res.updatedAt;
-    } catch (e) {
-      if (String(e.message) === "auth") askKeyAndReload();
-    } finally { pushing = false; }
+    } catch (e) { /* sessiz; localStorage yedeği var */ }
+    finally { pushing = false; }
   }, 700);
 }
 
 async function cloudBootstrap() {
   cloudEnabled = true;
-  if (!apiKey()) {
-    const k = window.prompt("Fixpre erişim anahtarı (yöneticinizden alın):", "");
-    if (k && k.trim()) setApiKey(k.trim());
-  }
   try {
     const res = await apiGet();
     if (res && res.data) {
@@ -2346,10 +2335,9 @@ async function cloudBootstrap() {
       lastAppliedAt = put.updatedAt;
     }
   } catch (e) {
-    if (String(e.message) === "auth") { askKeyAndReload(); return; }
-    cloudEnabled = false; // API erişilemiyor -> yerel modda devam
+    cloudEnabled = false; // API erişilemiyor -> yerel veriyle devam
   }
-  render();
+  render();                 // her durumda ekranı çiz (boş kalmasın)
   if (cloudEnabled) startPolling();
 }
 
