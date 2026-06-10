@@ -106,7 +106,7 @@ let DB = loadDB();
 /* ---------------- Oturum ---------------- */
 
 function currentUser() {
-  const id = sessionStorage.getItem(SESSION_KEY);
+  const id = localStorage.getItem(SESSION_KEY);
   if (!id) return null;
   return DB.users.find((u) => u.id === id) || null;
 }
@@ -116,12 +116,12 @@ function login(email, password) {
     (x) => x.email.toLowerCase() === email.toLowerCase().trim() && x.password === password
   );
   if (!u) return false;
-  sessionStorage.setItem(SESSION_KEY, u.id);
+  localStorage.setItem(SESSION_KEY, u.id);
   return true;
 }
 
 function logout() {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   render();
 }
 
@@ -578,7 +578,7 @@ function renderLogin() {
         ownerId: id, managerId: null, venueIds: [], lang: "tr",
       });
       saveDB(DB);
-      sessionStorage.setItem(SESSION_KEY, id);
+      localStorage.setItem(SESSION_KEY, id);
       activeTab = "bugun";
       staffTab = "bugun";
       render();
