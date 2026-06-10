@@ -1623,7 +1623,7 @@ function shareBlock(t, u) {
   if (sharingTask !== t.id) {
     return `<div class="share-row"><button class="btn-ghost btn-sm" data-share="${t.id}">👥 Personelle paylaş</button></div>`;
   }
-  const candidates = visibleStaff(u).filter((s) => !t.assignedUserIds.includes(s.id));
+  const candidates = assignableUsers(u).filter((s) => s.role === "personel" && !t.assignedUserIds.includes(s.id));
   const checks = candidates.length
     ? candidates.map((s) => `<label class="check-pill"><input type="checkbox" class="share-pick" value="${s.id}" />${esc(s.name)}</label>`).join("")
     : `<div class="empty" style="padding:8px">Eklenebilecek başka personel yok.</div>`;
