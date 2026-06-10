@@ -2078,12 +2078,13 @@ function wireReports(u) {
    İZİN / MESAİ talepleri
    ============================================================ */
 const LEAVE_CATS = [
-  { key: "yillikizin", label: "Yıllık İzin (tarih aralığı)", icon: "🗓️" },
+  { key: "yillikizin", label: "İleri Tarihli İzin Talebi", icon: "🗓️" },
   { key: "izin", label: "İzin Talebi", icon: "🏖️" },
   { key: "gecikme", label: "Geç Geleceğim", icon: "⏰" },
   { key: "telafi", label: "Telafi Edeceğim (fazla mesai ile)", icon: "🔁" },
   { key: "eksik", label: "Eksik Mesai", icon: "🔴" },
   { key: "fazla", label: "Fazla Mesai", icon: "🟢" },
+  { key: "ucretsizizin", label: "Ücretsiz İzin", icon: "🟠" },
 ];
 function leaveCat(key) { return LEAVE_CATS.find((c) => c.key === key) || LEAVE_CATS[0]; }
 const WORKDAY_HOURS = 8;   // izin günlerini saate çevirmek için (1 gün = 8 saat)
@@ -2097,13 +2098,27 @@ function daysBetween(s, e) {
   if (isNaN(a) || isNaN(b) || b < a) return 0;
   return Math.round((b - a) / 86400000) + 1;
 }
-// Onaylanmış yıllık izinlerde kullanılan gün
+// Kullanılan (gün): onaylı ileri tarihli izinlerden TARİHİ GELMİŞ olanlar (start <= bugün)
 function usedLeaveDays(userId, owner) {
+  const tk = todayKey();
   return orgLeaves(owner)
-    .filter((l) => l.createdBy === userId && l.category === "yillikizin" && l.status === "onaylandi")
+    .filter((l) => l.createdBy === userId && l.category === "yillikizin" && l.status === "onaylandi" && (l.startDate || "") <= tk)
     .reduce((s, l) => s + (Number(l.days) || 0), 0);
 }
-// Kalan yıllık izin = hak − kullanılan
+// Planlı (gün): onaylı ama tarihi henüz gelmemiş izinler (start > bugün)
+function plannedLeaveDays(userId, owner) {
+  const tk = todayKey();
+  return orgLeaves(owner)
+    .filter((l) => l.createdBy === userId && l.category === "yillikizin" && l.status === "onaylandi" && (l.startDate || "") > tk)
+    .reduce((s, l) => s + (Number(l.days) || 0), 0);
+}
+// Ücretsiz izin (gün): yöneticinin manuel yazdığı
+function unpaidLeaveDays(userId, owner) {
+  return orgLeaves(owner)
+    .filter((l) => l.createdBy === userId && l.category === "ucretsizizin" && l.status === "onaylandi")
+    .reduce((s, l) => s + (Number(l.days) || 0), 0);
+}
+// Kalan izin = hak − kullanılan (tarihi gelmiş). Negatif olabilir (eksi gün).
 function leaveRemaining(user, owner) {
   return (Number(user && user.leaveDays) || 0) - usedLeaveDays(user.id, owner);
 }
@@ -2146,7 +2161,7 @@ function leaveCard(u, l, canDecide) {
   const who = userById(l.createdBy);
   const pending = l.status === "beklemede";
   const approved = l.status === "onaylandi";
-  const amount = l.category === "yillikizin"
+  const amount = (l.category === "yillikizin" || l.category === "ucretsizizin")
     ? `${l.days || 0} gün · ${l.startDate ? fmtDay(l.startDate) : "?"} – ${l.endDate ? fmtDay(l.endDate) : "?"}`
     : l.category === "izin"
       ? `${l.days || 0} gün ${l.hours || 0} saat`
@@ -2173,7 +2188,7 @@ function leaveCard(u, l, canDecide) {
 }
 
 function leaveCreateForm(u) {
-  const cats = LEAVE_CATS.map((c) => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join("");
+  const cats = LEAVE_CATS.filter((c) => c.key !== "ucretsizizin").map((c) => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join("");
   return `
     <div class="card">
       <h2>📨 İzin / Mesai Talebi</h2>
@@ -2205,19 +2220,37 @@ function leavesView(u) {
     const balanceRows = people.length ? people.map((p) => {
       const ent = Number(p.leaveDays) || 0;
       const usedD = usedLeaveDays(p.id, owner);
+      const planD = plannedLeaveDays(p.id, owner);
+      const unpaidD = unpaidLeaveDays(p.id, owner);
       const rem = ent - usedD;
       return `
       <div class="list-item">
         <div>
           <div class="title">${roleIcon(p)} ${esc(p.name)}</div>
-          <div class="meta">🗓️ İzin: kalan ${rem} / ${ent} gün (kullanılan ${usedD})</div>
+          <div class="meta">🗓️ İzin: kalan ${rem} / ${ent} gün · planlı ${planD} · ücretsiz ${unpaidD}</div>
         </div>
         ${balanceBadge(mesaiBalance(p.id, owner))}
       </div>`;
     }).join("") : `<div class="empty">Kişi yok.</div>`;
+    const unpaidUserOpts = people.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    const unpaidForm = people.length ? `
+      <details class="cat" style="margin-bottom:18px">
+        <summary><span>🟠 Ücretsiz İzin Yaz</span></summary>
+        <div class="cat-body" style="padding:14px">
+          <div class="row">
+            <div class="field"><label>Kişi</label><select id="uz_user">${unpaidUserOpts}</select></div>
+            <div class="field"><label>Başlangıç</label><input id="uz_start" type="date" /></div>
+            <div class="field"><label>Bitiş</label><input id="uz_end" type="date" /></div>
+          </div>
+          <div class="field"><label>Açıklama (opsiyonel)</label><input id="uz_note" placeholder="Ör: ücretsiz izin" /></div>
+          <button class="btn-primary" id="uz_save">Ücretsiz İzin Kaydet</button>
+          <div class="error-msg" id="uz_err"></div>
+        </div>
+      </details>` : "";
     return `
       <div class="section-title">Bekleyen Talepler (${pending.length})</div>
       ${pending.length ? pending.map((l) => leaveCard(u, l, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}
+      ${unpaidForm}
       <div class="section-title">Mesai Durumu (Eksik / Fazla)</div>
       <p style="color:var(--muted);font-size:13px;margin:-8px 0 12px">🟢 Fazla & Telafi = alacak · 🔴 İzin & Geç gelme & Eksik = borç · (1 gün = ${WORKDAY_HOURS} saat). Sadece onaylanan talepler sayılır.</p>
       ${balanceRows}
@@ -2230,12 +2263,15 @@ function leavesView(u) {
   const bal = mesaiBalance(u.id, owner);
   const entitlement = Number(u.leaveDays) || 0;
   const used = usedLeaveDays(u.id, owner);
+  const planned = plannedLeaveDays(u.id, owner);
+  const unpaid = unpaidLeaveDays(u.id, owner);
   const remaining = entitlement - used;
+  const remCls = remaining < 0 ? "bal-red" : (remaining > 0 ? "bal-green" : "bal-zero");
   return `
     <div class="card balance-card">
-      <div class="balance-label">Yıllık İzin Hakkınız</div>
-      <span class="bal ${remaining > 0 ? "bal-green" : "bal-zero"}">${remaining} / ${entitlement} gün</span>
-      <div class="meta">Kullanılan: ${used} gün · Kalan günlerinizi tarih aralığı seçerek kullanabilirsiniz.</div>
+      <div class="balance-label">İzin Hakkınız</div>
+      <span class="bal ${remCls}">${remaining} / ${entitlement} gün</span>
+      <div class="meta">Kullanılan: ${used} · Planlı: ${planned} · Ücretsiz: ${unpaid} gün · İleri tarihli izni tarih aralığı seçerek talep edin.</div>
     </div>
     <div class="card balance-card">
       <div class="balance-label">Mesai Durumunuz</div>
@@ -2290,8 +2326,6 @@ function wireLeaves(u) {
       if (!startDate || !endDate) { err.textContent = "Başlangıç ve bitiş tarihi seçin."; return; }
       const days = daysBetween(startDate, endDate);
       if (days <= 0) { err.textContent = "Bitiş tarihi başlangıçtan önce olamaz."; return; }
-      const remaining = leaveRemaining(u, ownerIdOf(u));
-      if (days > remaining) { err.textContent = `Kalan izniniz ${remaining} gün; ${days} gün talep ettiniz.`; return; }
       DB.leaves.push({
         id: uid(), ownerId: ownerIdOf(u), createdBy: u.id,
         category, days, hours: 0, startDate, endDate, date: null, note, status: "beklemede",
@@ -2314,6 +2348,29 @@ function wireLeaves(u) {
     notifyUsers([ownerIdOf(u)], "Yeni izin/mesai talebi", u.name, "/");
     render();
   };
+  // Yönetici: manuel ücretsiz izin kaydı
+  const uzBtn = document.getElementById("uz_save");
+  if (uzBtn) uzBtn.onclick = () => {
+    const userId = document.getElementById("uz_user").value;
+    const startDate = document.getElementById("uz_start").value;
+    const endDate = document.getElementById("uz_end").value;
+    const note = document.getElementById("uz_note").value.trim();
+    const err = document.getElementById("uz_err");
+    if (!userId) { err.textContent = "Kişi seçin."; return; }
+    if (!startDate || !endDate) { err.textContent = "Başlangıç ve bitiş tarihi seçin."; return; }
+    const days = daysBetween(startDate, endDate);
+    if (days <= 0) { err.textContent = "Bitiş tarihi başlangıçtan önce olamaz."; return; }
+    DB.leaves.push({
+      id: uid(), ownerId: ownerIdOf(u), createdBy: userId, recordedBy: u.id,
+      category: "ucretsizizin", days, hours: 0, startDate, endDate, date: null, note,
+      status: "onaylandi", createdAt: new Date().toISOString(),
+      decidedBy: u.id, decidedAt: new Date().toISOString(), decisionNote: "Yönetici kaydı", seenByReporter: false,
+    });
+    saveDB(DB);
+    notifyUsers([userId], "Ücretsiz izin kaydedildi", `${days} gün`, "/");
+    render();
+  };
+
   document.querySelectorAll("[data-leave-ok]").forEach((b) => {
     b.onclick = () => decideLeave(b.dataset.leaveOk, "onaylandi", u);
   });

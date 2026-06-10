@@ -214,7 +214,11 @@ const I18N_ROWS = [
 
   // --- İzin / Mesai ---
   ["📨 İzin / Mesai Talebi", "📨 Leave / Hours Request", "📨 Urlaub / Stunden anfragen", "📨 Запрос отпуска / часов", "📨 Solicitud de permiso / horas", "📨 Richiesta permesso / ore"],
-  ["Yıllık İzin (tarih aralığı)", "Annual Leave (date range)", "Jahresurlaub (Zeitraum)", "Ежегодный отпуск (период)", "Vacaciones anuales (rango)", "Ferie annuali (intervallo)"],
+  ["İleri Tarihli İzin Talebi", "Future-dated Leave Request", "Urlaubsantrag (Datum)", "Заявка на отпуск (на дату)", "Solicitud de permiso (fecha futura)", "Richiesta ferie (data futura)"],
+  ["İzin Hakkınız", "Your Leave", "Ihr Urlaub", "Ваш отпуск", "Su permiso", "Le tue ferie"],
+  ["🟠 Ücretsiz İzin Yaz", "🟠 Record Unpaid Leave", "🟠 Unbezahlten Urlaub erfassen", "🟠 Записать отпуск без содержания", "🟠 Registrar permiso sin sueldo", "🟠 Registra permesso non retribuito"],
+  ["Ücretsiz İzin Kaydet", "Save Unpaid Leave", "Unbezahlten Urlaub speichern", "Сохранить отпуск без содержания", "Guardar permiso sin sueldo", "Salva permesso non retribuito"],
+  ["Ücretsiz İzin", "Unpaid Leave", "Unbezahlter Urlaub", "Отпуск без содержания", "Permiso sin sueldo", "Permesso non retribuito"],
   ["Yıllık İzin Hakkınız", "Your Annual Leave", "Ihr Jahresurlaub", "Ваш ежегодный отпуск", "Sus vacaciones anuales", "Le tue ferie annuali"],
   ["Yıllık izin hakkı (gün)", "Annual leave (days)", "Jahresurlaub (Tage)", "Ежегодный отпуск (дни)", "Vacaciones anuales (días)", "Ferie annuali (giorni)"],
   ["Başlangıç ve bitiş tarihi seçin.", "Select start and end dates.", "Start- und Enddatum wählen.", "Выберите даты начала и конца.", "Seleccione fechas de inicio y fin.", "Seleziona date di inizio e fine."],
