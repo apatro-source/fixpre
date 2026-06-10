@@ -659,7 +659,7 @@ function wireCommon() {
 function renderManager(u) {
   const isOwner = u.role === "yonetici";
   const openReports = incomingReports(u).filter((r) => r.status === "acik").length;
-  const bildirimLabel = "Bildirimler" + (openReports ? ` (${openReports})` : "");
+  const bildirimLabel = "Talepler" + (openReports ? ` (${openReports})` : "");
   const leaveCount = isOwner
     ? orgLeaves(ownerIdOf(u)).filter((l) => l.status === "beklemede").length
     : myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length;
@@ -920,7 +920,7 @@ function mgrDashboard(u) {
       ${statCard("Bugün Aktif", active.length, "blue")}
       ${statCard("Bugün Biten", done.length, "green")}
       ${statCard("Geciken", missed.length, "red")}
-      ${statCard("Açık Bildirim", openRep, "amber")}
+      ${statCard("Açık Talep", openRep, "amber")}
       ${statCard("Toplam Görev", all.length, "gray")}
     </div>
 
@@ -1009,13 +1009,7 @@ function perfView(u) {
   return rangeFilter("perf", perfFrom, perfTo) + `
     <div class="card">
       <h2>📊 Personel Performansı</h2>
-      <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">
-        <strong>Tamamladığı</strong>: kişinin bizzat tamamladığı görev sayısı ·
-        <strong>Zamanında</strong>: gününde/erken ·
-        <strong>Geç</strong>: sonradan ·
-        <strong>Geciken</strong>: ekipçe hiç yapılmamış (sorumlu olduğu) ·
-        <strong>%</strong>: zamanında oranı.
-      </p>
+      <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Açıklama: Tamamladığı = kişinin bizzat tamamladığı görev sayısı; Zamanında = gününde veya erken yapılan; Geç = sonradan yapılan; Geciken = ekipçe hiç yapılmamış (sorumlu olduğu); % = zamanında oranı.</p>
       <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Kişi</th><th>Mekan</th><th>Tamamladığı</th><th>Zamanında</th><th>Geç</th><th>Geciken</th><th>Zamanında %</th></tr></thead>
@@ -1883,7 +1877,7 @@ function reportCreateForm(u) {
   const venueOpts = `<option value="">Mekan (opsiyonel)</option>` + venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
   return `
     <div class="card">
-      <h2>📨 Bildirim / Talep Gönder</h2>
+      <h2>📨 Talep Gönder</h2>
       <div class="row">
         <div class="field"><label>Tür</label><select id="rep_cat">${cats}</select></div>
         ${recipientField}
@@ -1907,12 +1901,12 @@ function reportsView(u) {
   return `
     ${u.role !== "yonetici" ? reportCreateForm(u) : ""}
     ${canResolve ? `
-      <div class="section-title">Gelen Bildirimler — Açık (${incOpen.length})</div>
-      ${incOpen.length ? incOpen.map((r) => reportCard(u, r, true)).join("") : `<div class="empty">Bekleyen bildirim yok. 🎉</div>`}
-      ${incDone.length ? `<details class="cat" style="margin-top:14px"><summary><span>✅ Çözülen Bildirimler</span><span class="cat-count">${incDone.length}</span></summary><div class="cat-body" style="padding-top:12px">${incDone.map((r) => reportCard(u, r, false)).join("")}</div></details>` : ""}
+      <div class="section-title">Gelen Talepler — Açık (${incOpen.length})</div>
+      ${incOpen.length ? incOpen.map((r) => reportCard(u, r, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}
+      ${incDone.length ? `<details class="cat" style="margin-top:14px"><summary><span>✅ Çözülen Talepler</span><span class="cat-count">${incDone.length}</span></summary><div class="cat-body" style="padding-top:12px">${incDone.map((r) => reportCard(u, r, false)).join("")}</div></details>` : ""}
     ` : ""}
     ${mine.length ? `
-      <div class="section-title">Gönderdiğim Bildirimler (${mine.length})</div>
+      <div class="section-title">Gönderdiğim Talepler (${mine.length})</div>
       ${mine.map((r) => reportCard(u, r, false)).join("")}
     ` : ""}
   `;
@@ -1925,7 +1919,7 @@ function reportsPanel(u) {
   if (!open.length) return "";
   return `
     <div class="reports-board">
-      <div class="reports-head">📨 Bekleyen Bildirimler (${open.length})</div>
+      <div class="reports-head">📨 Bekleyen Talepler (${open.length})</div>
       ${open.map((r) => reportCard(u, r, true)).join("")}
     </div>`;
 }
@@ -1934,7 +1928,7 @@ function reportsPanel(u) {
 function resolvedBanner(u) {
   const unseen = myReports(u).filter((r) => r.status === "cozuldu" && !r.seenByReporter);
   if (!unseen.length) return "";
-  return `<div class="notif-banner">✅ ${unseen.length} bildiriminiz çözüldü — "Bildirim" sekmesinden görebilirsiniz.</div>`;
+  return `<div class="notif-banner">✅ ${unseen.length} talebiniz çözüldü — "Talepler" sekmesinden görebilirsiniz.</div>`;
 }
 
 function wireReports(u) {
@@ -1967,7 +1961,7 @@ function wireReports(u) {
     if (target === "sef") recips = [toUserId];
     else if (target === "tumsef") recips = orgChefs(ownerIdOf(u)).map((c) => c.id);
     else recips = [ownerIdOf(u)];
-    notifyUsers(recips, "Yeni bildirim", text, "/");
+    notifyUsers(recips, "Yeni talep", text, "/");
     render();
   };
 
@@ -1982,7 +1976,7 @@ function wireReports(u) {
       r.resolvedBy = u.id;
       r.seenByReporter = false;     // gönderene bildirilecek
       saveDB(DB);
-      notifyUsers([r.createdBy], "Bildiriminiz çözüldü", r.reply || r.text, "/");
+      notifyUsers([r.createdBy], "Talebiniz çözüldü", r.reply || r.text, "/");
       render();
     };
   });
@@ -2286,7 +2280,7 @@ function renderStaff(u) {
   const tabs = [
     ["bugun", "Görevlerim"],
     ["gecmis", "Biten Görevler"],
-    ["bildirim", "Bildirim" + (repNotif ? ` (${repNotif})` : "")],
+    ["bildirim", "Talepler" + (repNotif ? ` (${repNotif})` : "")],
     ["izin", "İzin / Mesai" + (leaveNotif ? ` (${leaveNotif})` : "")],
   ];
   let body;
