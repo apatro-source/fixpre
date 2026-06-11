@@ -543,7 +543,18 @@ function scrollActiveTabIntoView() {
 }
 
 // Giriş yapılmadan önce seçilen dil (misafir dili)
-function guestLang() { return localStorage.getItem("fixpre_lang") || "en"; }
+// Akıllı varsayılan dil: kullanıcı seçtiyse o; yoksa cihaz dili (destekliyorsak); değilse İngilizce
+function guestLang() {
+  const saved = localStorage.getItem("fixpre_lang");
+  if (saved) return saved;
+  const supported = (typeof LANGS !== "undefined") ? LANGS.map(([k]) => k) : ["tr", "en", "de", "ru", "es", "it"];
+  const navs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || "en"];
+  for (const l of navs) {
+    const code = String(l).slice(0, 2).toLowerCase();
+    if (supported.includes(code)) return code;
+  }
+  return "en";   // desteklemediğimiz dil → İngilizce
+}
 
 // Render sonrası ekranı kullanıcının (veya giriş öncesi misafir) diline çevir
 function translateUI() {
