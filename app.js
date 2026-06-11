@@ -733,13 +733,19 @@ function renderLogin() {
   const langSel = LANGS.map(([k, l]) => `<option value="${k}" ${gl === k ? "selected" : ""}>${l}</option>`).join("");
 
   const features = [
-    ["✅", "Görev Yönetimi", "Personele görev atayın, tekrarlayan görevler kurun, tamamlanmayı anlık takip edin."],
-    ["📅", "Haftalık Vardiya", "Vardiya planı oluşturun (A/B/C saatleri), vardiya ve izin değişikliği taleplerini yönetin."],
-    ["🏖️", "İzin ve Mesai Takibi", "İzin, fazla ve eksik mesai takibi; talepler onaya gider, bakiye otomatik hesaplanır."],
-    ["📨", "Talepler ve Duyurular", "Arıza, eksik ve istek bildirimleri; tüm lokasyonlara tek tıkla duyuru."],
-    ["👥", "Yönetici, Şef, Personel", "Roller ve lokasyon bazlı yetki; onay yetkisini siz belirleyin."],
-    ["🌍", "6 Dil ve Mobil", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca, İtalyanca. Telefona kurulabilir (PWA)."],
+    ["✅", "Görev Yönetimi", "Personele görev atayın, tekrarlayan görevler kurun, tamamlanmayı anlık takip edin.", "blue"],
+    ["📅", "Haftalık Vardiya", "Vardiya planı oluşturun (A/B/C saatleri), vardiya ve izin değişikliği taleplerini yönetin.", "green"],
+    ["🏖️", "İzin ve Mesai Takibi", "İzin, fazla ve eksik mesai takibi; talepler onaya gider, bakiye otomatik hesaplanır.", "amber"],
+    ["📨", "Talepler ve Duyurular", "Arıza, eksik ve istek bildirimleri; tüm lokasyonlara tek tıkla duyuru.", "pink"],
+    ["👥", "Yönetici, Şef, Personel", "Roller ve lokasyon bazlı yetki; onay yetkisini siz belirleyin.", "purple"],
+    ["🌍", "6 Dil ve Mobil", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca, İtalyanca. Telefona kurulabilir (PWA).", "teal"],
   ];
+  const roles = [
+    ["👑", "Yönetici", "Lokasyonları, şefleri ve personeli ekler; paketleri, onay yetkilerini ve tüm işletmeyi tek yerden yönetir."],
+    ["👔", "Şef", "Kendi lokasyonundaki ekibi ve görevleri yönetir; izin ve vardiya taleplerini (yetki verilirse) onaylar."],
+    ["👤", "Personel", "Görevlerini ve haftalık vardiyasını görür; izin, mesai ve vardiya değişikliği talebi gönderir."],
+  ];
+  const sectors = ["Restoran", "Kafe", "Market", "Otel", "Mağaza", "Kuaför & Berber", "Fırın & Pastane", "Bar & Cafe", "Eczane", "Spor Salonu", "Şube Zinciri", "Üretim & Atölye"];
   const planCards = PACKAGES.map((p) => `
     <div class="pkg-card pkg-${p.key}">
       <div class="pkg-name">${p.name}</div>
@@ -767,8 +773,24 @@ function renderLogin() {
       </section>
 
       <section class="lp-features">
-        ${features.map(([ic, t, d]) => `
-          <div class="lp-card"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
+        ${features.map(([ic, t, d, c]) => `
+          <div class="lp-card lp-c-${c}"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
+      </section>
+
+      <section class="lp-roles">
+        <h2>Kendi hiyerarşik düzeninizi kurun</h2>
+        <p class="lp-lead">Yönetici en üstte; şefler lokasyonları ve ekipleri yönetir; personel kendi görev ve vardiyasını görür. Onay ve görüntüleme yetkilerini tamamen siz belirlersiniz.</p>
+        <div class="lp-roles-grid">
+          ${roles.map(([ic, t, d], i) => `
+            ${i ? `<div class="lp-arrow">→</div>` : ""}
+            <div class="lp-role"><div class="lp-role-ic">${ic}</div><div><h3>${t}</h3><p>${d}</p></div></div>`).join("")}
+        </div>
+      </section>
+
+      <section class="lp-sectors">
+        <h2>Her işletme için uygun</h2>
+        <p class="lp-lead">Tek şube ya da çok şubeli zincir — Fixpre işletmenizle birlikte büyür.</p>
+        <div class="lp-chips">${sectors.map((s) => `<span class="lp-chip">${s}</span>`).join("")}</div>
       </section>
 
       <section class="lp-plans">
@@ -791,6 +813,11 @@ function renderLogin() {
         </div>
       </div>
 
+      <section class="lp-seo">
+        <h2>Personel takip ve vardiya programı</h2>
+        <p class="lp-lead">Fixpre, işletmeler için online personel takip programı, vardiya planlama programı ve izin takip uygulamasıdır. Personele görev atama, haftalık vardiya çizelgesi oluşturma, vardiya değişikliği ve takası, izin/mesai takibi, talep ve duyuru yönetimini tek yerde sunar. Restoran personel yönetimi, kafe ve market vardiya programı arıyorsanız Excel'e gerek kalmadan ücretsiz başlayın.</p>
+        <a href="#giris" class="btn-primary lp-cta">Hemen Ücretsiz Başla</a>
+      </section>
       <footer class="lp-foot">© Fixpre · fixpre.com — personel görev, vardiya ve izin yönetim uygulaması</footer>
     </div>
   `;
