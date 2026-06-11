@@ -576,6 +576,7 @@ function mountProfile(u) {
             <div class="field"><label>Personel</label><input id="sa_staff" type="number" min="1" value="4" /></div>
           </div>
           <label class="check-pill" style="margin-top:8px"><input type="checkbox" id="sa_unlimited" /> Sınırsız</label>
+          <div class="field" style="margin-top:8px"><label>Süre (gün) — 0 veya boş = süresiz</label><input id="sa_days" type="number" min="0" value="30" /></div>
           <button class="btn-ghost" id="sa_grant" style="width:100%;margin-top:10px">Yetkiyi Uygula</button>
           <div class="error-msg" id="sa_msg"></div>
         </div>` : ""}
@@ -610,13 +611,16 @@ function mountProfile(u) {
     const maxChefs = parseInt(document.getElementById("sa_chefs").value, 10) || 0;
     const maxStaff = parseInt(document.getElementById("sa_staff").value, 10) || 4;
     const unlimited = document.getElementById("sa_unlimited").checked;
+    const days = parseInt(document.getElementById("sa_days").value, 10) || 0;
     const msg = document.getElementById("sa_msg");
     if (!targetEmail) { msg.textContent = "E-posta girin."; return; }
     grantBtn.disabled = true; msg.textContent = "";
     try {
-      await authCall({ action: "setPlan", targetEmail, maxVenues, maxChefs, maxStaff, unlimited });
+      await authCall({ action: "setPlan", targetEmail, maxVenues, maxChefs, maxStaff, unlimited, days });
       msg.style.color = "#059669";
-      msg.textContent = "Yetki uygulandı ✅ (kullanıcı bir sonraki açılışta görür)";
+      msg.textContent = days > 0
+        ? `Yetki uygulandı ✅ ${days} gün sonra demo'ya döner`
+        : "Yetki uygulandı ✅ (süresiz)";
     } catch (e) {
       grantBtn.disabled = false;
       msg.textContent = (String(e.message) === "not_found") ? "Bu e-postayla kayıt bulunamadı."
@@ -1113,6 +1117,7 @@ function mgrDashboard(u) {
   ` : "";
 
   return `
+    ${(orgPlan.expired || (orgPlan.daysLeft != null && orgPlan.daysLeft <= 7)) ? planStatusBanner() : ""}
     ${resolvedBanner(u)}
     ${leaveBanner(u)}
     <div class="dash-date">📅 ${dateStr}</div>
@@ -1178,6 +1183,17 @@ function performanceData(owner, from, to) {
 }
 
 // Müşterinin (yöneticinin) gördüğü paket/fiyat ekranı — i18n ile 6 dilde
+// Plan süresi durumu (geri sayım / doldu) — banner için
+function planStatusBanner() {
+  const pl = orgPlan || {};
+  if (pl.expired) return `<div class="plan-banner bad">⚠️ Paket süreniz doldu — Demo sürümdesiniz. Devam için ${SUPER_EMAIL} ile iletişime geçin.</div>`;
+  if (pl.daysLeft != null) {
+    const warn = pl.daysLeft <= 7;
+    return `<div class="plan-banner ${warn ? "warn" : "ok"}">⏳ Paketinizin bitmesine ${pl.daysLeft} gün kaldı.${warn ? " Devam için iletişime geçin." : ""}</div>`;
+  }
+  return "";
+}
+
 function currentPackageKey() {
   const pl = orgPlan || {};
   if (pl.unlimited) return "corp";
@@ -1204,6 +1220,7 @@ function packagesView(u) {
   }).join("");
   return `
     <div class="section-title">💎 Paketler</div>
+    ${planStatusBanner()}
     <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.</p>
     <div class="pkg-grid">${cards}</div>
     <div class="card" style="margin-top:14px;text-align:center">

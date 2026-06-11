@@ -492,6 +492,12 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 .pkg-btn.active { border-color: var(--primary); background: #eef4ff; color: var(--primary); }
 .pkg-btn.active span { color: var(--primary); }
 
+/* ---- Plan süresi banner'ı (geri sayım / doldu) ---- */
+.plan-banner { padding: 12px 14px; border-radius: 12px; font-weight: 600; font-size: 13.5px; margin-bottom: 14px; }
+.plan-banner.bad { background: #fee2e2; color: #b91c1c; }
+.plan-banner.warn { background: #fef3c7; color: #b45309; }
+.plan-banner.ok { background: #eef4ff; color: #3730a3; }
+
 /* ---- Müşteriye görünen paket kartları ---- */
 .pkg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .pkg-card {

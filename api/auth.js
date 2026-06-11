@@ -35,15 +35,26 @@ async function initTables(sql) {
     max_chefs int not null default 1, unlimited boolean not null default false, updated_at timestamptz default now()
   )`;
   await sql`alter table org_plans add column if not exists max_chefs int not null default 1`;
+  await sql`alter table org_plans add column if not exists expires_at timestamptz`;
 }
 
-// Organizasyonun planı/limitleri (süper admin org'u = sınırsız)
+const DEMO_PLAN = { maxVenues: DEFAULT_MAX_VENUES, maxStaff: DEFAULT_MAX_STAFF, maxChefs: DEFAULT_MAX_CHEFS, unlimited: false, expiresAt: null, expired: false, daysLeft: null };
+
+// Organizasyonun planı/limitleri (süper admin org'u = sınırsız; süre dolduysa demo)
 async function getPlan(sql, orgId) {
   const owner = await sql`select email from accounts where org_id = ${orgId} and role = 'yonetici' limit 1`;
-  if (owner.length && owner[0].email === SUPER_EMAIL) return { maxVenues: 999999, maxStaff: 999999, maxChefs: 999999, unlimited: true };
-  const p = await sql`select max_venues, max_staff, max_chefs, unlimited from org_plans where org_id = ${orgId}`;
-  if (p.length) return { maxVenues: p[0].max_venues, maxStaff: p[0].max_staff, maxChefs: p[0].max_chefs, unlimited: p[0].unlimited };
-  return { maxVenues: DEFAULT_MAX_VENUES, maxStaff: DEFAULT_MAX_STAFF, maxChefs: DEFAULT_MAX_CHEFS, unlimited: false };
+  if (owner.length && owner[0].email === SUPER_EMAIL) return { maxVenues: 999999, maxStaff: 999999, maxChefs: 999999, unlimited: true, expiresAt: null, expired: false, daysLeft: null };
+  const p = await sql`select max_venues, max_staff, max_chefs, unlimited, expires_at from org_plans where org_id = ${orgId}`;
+  if (!p.length) return { ...DEMO_PLAN };
+  const row = p[0];
+  const exp = row.expires_at ? new Date(row.expires_at) : null;
+  const now = Date.now();
+  if (exp && exp.getTime() <= now) {
+    // Süre doldu → demo limitleri (mevcut veri silinmez; yalnızca yeni ekleme demo'ya takılır)
+    return { ...DEMO_PLAN, expiresAt: exp.toISOString(), expired: true, daysLeft: 0 };
+  }
+  const daysLeft = exp ? Math.ceil((exp.getTime() - now) / 86400000) : null;
+  return { maxVenues: row.max_venues, maxStaff: row.max_staff, maxChefs: row.max_chefs, unlimited: row.unlimited, expiresAt: exp ? exp.toISOString() : null, expired: false, daysLeft };
 }
 
 module.exports = async (req, res) => {
@@ -134,9 +145,13 @@ module.exports = async (req, res) => {
       const maxVenues = Math.max(1, parseInt(body.maxVenues, 10) || DEFAULT_MAX_VENUES);
       const maxStaff = Math.max(1, parseInt(body.maxStaff, 10) || DEFAULT_MAX_STAFF);
       const maxChefs = Math.max(0, parseInt(body.maxChefs, 10) || DEFAULT_MAX_CHEFS);
-      await sql`insert into org_plans (org_id, max_venues, max_staff, max_chefs, unlimited, updated_at)
-        values (${orgId}, ${maxVenues}, ${maxStaff}, ${maxChefs}, ${unlimited}, now())
-        on conflict (org_id) do update set max_venues = excluded.max_venues, max_staff = excluded.max_staff, max_chefs = excluded.max_chefs, unlimited = excluded.unlimited, updated_at = now()`;
+      // Süre (gün): >0 ise bitiş tarihi = şimdi + gün; 0/boş ise süresiz (NULL)
+      const days = parseInt(body.days, 10);
+      let expiresAt = null;
+      if (Number.isFinite(days) && days > 0) { const d = new Date(); d.setDate(d.getDate() + days); expiresAt = d.toISOString(); }
+      await sql`insert into org_plans (org_id, max_venues, max_staff, max_chefs, unlimited, expires_at, updated_at)
+        values (${orgId}, ${maxVenues}, ${maxStaff}, ${maxChefs}, ${unlimited}, ${expiresAt}, now())
+        on conflict (org_id) do update set max_venues = excluded.max_venues, max_staff = excluded.max_staff, max_chefs = excluded.max_chefs, unlimited = excluded.unlimited, expires_at = excluded.expires_at, updated_at = now()`;
       res.status(200).json({ ok: true });
       return;
     }
