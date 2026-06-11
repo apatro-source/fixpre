@@ -50,6 +50,8 @@ const I18N_ROWS = [
   ["Personelim", "My Staff", "Mein Personal", "Мой персонал", "Mi personal", "Il mio personale"],
   ["İzin / Mesai", "Leave / Hours", "Urlaub / Stunden", "Отпуск / Часы", "Permiso / Horas", "Permessi / Ore"],
   ["Kayıtlar", "Records", "Aufzeichnungen", "Записи", "Registros", "Registri"],
+  ["Ekip", "Team", "Team", "Команда", "Equipo", "Team"],
+  ["Daha Fazla", "More", "Mehr", "Ещё", "Más", "Altro"],
   ["Talepler", "Requests", "Anfragen", "Запросы", "Solicitudes", "Richieste"],
   ["Açık Talep", "Open Requests", "Offene Anfragen", "Открытые запросы", "Solicitudes abiertas", "Richieste aperte"],
   ["📨 Talep Gönder", "📨 Send Request", "📨 Anfrage senden", "📨 Отправить запрос", "📨 Enviar solicitud", "📨 Invia richiesta"],

@@ -790,6 +790,26 @@ function renderManager(u) {
         ["kayitlar", "Kayıtlar"],
       ];
 
+  // Gruplu üst menü (az sekme + açılır "Ekip" / "Daha Fazla")
+  const nav = isOwner
+    ? [
+        { k: "bugun", l: "Pano" },
+        { k: "gorevler", l: "Tüm Görevler" },
+        { grp: "Ekip", items: [["sefler", "Şefler"], ["mekanlar", "Mekanlar"], ["personel", "Personel"]] },
+        { k: "bildirim", l: bildirimLabel },
+        { k: "izin", l: izinLabel },
+        { grp: "Daha Fazla", items: [["performans", "Performans"], ["kayitlar", "Kayıtlar"], ["paketler", "Paketler"]] },
+      ]
+    : [
+        { k: "bugun", l: "Pano" },
+        { k: "gorevler", l: "Görevler" },
+        { k: "banaatanan", l: "Bana Atanan" },
+        { grp: "Ekip", items: [["mekanlar", "Mekanlarım"], ["personel", "Personelim"]] },
+        { k: "bildirim", l: bildirimLabel },
+        { k: "izin", l: izinLabel },
+        { k: "kayitlar", l: "Kayıtlar" },
+      ];
+
   // şef olmayan bir sekme açılmışsa Bugün'e düş
   if (!tabs.some(([k]) => k === activeTab)) activeTab = "bugun";
 
@@ -809,14 +829,25 @@ function renderManager(u) {
   app.innerHTML = topbar(u) + `
     <div class="container">
       <div class="tabs">
-        ${tabs.map(([k, l]) => `<button class="tab ${activeTab === k ? "active" : ""}" data-tab="${k}">${l}</button>`).join("")}
+        ${nav.map((item) => {
+          if (item.grp) {
+            const gActive = item.items.some(([k]) => k === activeTab);
+            return `<details class="tab-group${gActive ? " active" : ""}">
+              <summary class="tab${gActive ? " active" : ""}">${item.grp} ▾</summary>
+              <div class="tab-menu">
+                ${item.items.map(([k, l]) => `<button class="tab-sub${activeTab === k ? " active" : ""}" data-tab="${k}">${l}</button>`).join("")}
+              </div>
+            </details>`;
+          }
+          return `<button class="tab${activeTab === item.k ? " active" : ""}" data-tab="${item.k}">${item.l}</button>`;
+        }).join("")}
       </div>
       ${body}
     </div>
     ${editingTask ? taskEditModal(u) : ""}
   `;
   wireCommon();
-  document.querySelectorAll(".tab").forEach((t) => {
+  document.querySelectorAll("[data-tab]").forEach((t) => {
     t.onclick = () => {
       activeTab = t.dataset.tab;
       selectedVenue = null;

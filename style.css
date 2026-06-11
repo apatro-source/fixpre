@@ -171,12 +171,9 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 
 .tabs {
   display: flex; gap: 8px; margin-bottom: 22px;
-  flex-wrap: nowrap; overflow-x: auto;          /* tek satır, yana kaydırılabilir */
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;                          /* Firefox: çubuğu gizle */
+  flex-wrap: wrap; overflow: visible;             /* gruplu menü — açılır kutu kırpılmasın */
   padding-bottom: 2px;
 }
-.tabs::-webkit-scrollbar { display: none; }       /* Chrome/Safari: çubuğu gizle */
 .tab {
   flex: 0 0 auto; white-space: nowrap;            /* sekmeler küçülmesin/sarmasın */
   background: #fff; color: var(--muted); border: 2px solid var(--border);
@@ -188,6 +185,27 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   color: #fff; border-color: transparent;
   box-shadow: 0 4px 12px rgba(99, 102, 241, .35);
 }
+
+/* Açılır menü grupları (Ekip / Daha Fazla) */
+.tab-group { position: relative; }
+.tab-group > summary {
+  list-style: none; cursor: pointer; user-select: none;
+}
+.tab-group > summary::-webkit-details-marker { display: none; }
+.tab-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(31, 42, 68, .18); padding: 6px; min-width: 170px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tab-group:last-child .tab-menu { left: auto; right: 0; }   /* sağdaki menü içe açılsın */
+.tab-sub {
+  text-align: left; padding: 10px 13px; border: none; background: none;
+  border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600;
+  color: var(--text); white-space: nowrap;
+}
+.tab-sub:hover { background: #eef1f8; color: var(--primary); }
+.tab-sub.active { background: #eef4ff; color: var(--primary); font-weight: 800; }
 
 /* Mobilde sekmeleri biraz küçült (daha çoğu görünsün) */
 @media (max-width: 640px) {
