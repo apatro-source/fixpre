@@ -79,7 +79,7 @@ module.exports = async (req, res) => {
       const hash = await bcrypt.hash(password, 10);
       await sql`insert into accounts (id, org_id, email, password_hash, role) values (${userId}, ${orgId}, ${email}, ${hash}, 'yonetici')`;
       const data = {
-        users: [{ id: userId, role: "yonetici", name, email, ownerId: orgId, managerId: null, venueIds: [], lang: "tr" }],
+        users: [{ id: userId, role: "yonetici", name, email, ownerId: orgId, managerId: null, venueIds: [], lang: "en" }],
         venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [],
       };
       await sql`insert into org_state (org_id, data, updated_at) values (${orgId}, ${JSON.stringify(data)}::jsonb, now())`;

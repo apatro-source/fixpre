@@ -543,7 +543,7 @@ function scrollActiveTabIntoView() {
 }
 
 // Giriş yapılmadan önce seçilen dil (misafir dili)
-function guestLang() { return localStorage.getItem("fixpre_lang") || "tr"; }
+function guestLang() { return localStorage.getItem("fixpre_lang") || "en"; }
 
 // Render sonrası ekranı kullanıcının (veya giriş öncesi misafir) diline çevir
 function translateUI() {
@@ -877,7 +877,7 @@ function renderLogin() {
       try {
         await doRegister(name, email, pw);
         const me = currentUser();
-        if (me && guestLang() !== "tr") { me.lang = guestLang(); saveDB(DB); } // seçilen dili uygula
+        if (me) { me.lang = guestLang(); saveDB(DB); } // seçilen dili uygula (varsayılan İngilizce)
         activeTab = "bugun"; staffTab = "bugun";
         render();
       } catch (e) {
@@ -2113,7 +2113,7 @@ function wireMgrStaff(u) {
       const j = await authCall({ action: "createUser", role: "personel", name, email, password: pw });
       DB.users.push({
         id: j.userId, role: "personel", name, email,
-        ownerId: ownerIdOf(u), chefId: u.role === "sef" ? u.id : null, venueIds, lang: "tr",
+        ownerId: ownerIdOf(u), chefId: u.role === "sef" ? u.id : null, venueIds, lang: "en",
       });
       saveDB(DB);
       render();
@@ -2471,7 +2471,7 @@ function wireMgrChefs(u) {
     addBtn.disabled = true; err.textContent = "";
     try {
       const j = await authCall({ action: "createUser", role: "sef", name, email, password: pw });
-      DB.users.push({ id: j.userId, role: "sef", name, email, ownerId: owner, venueIds, lang: "tr" });
+      DB.users.push({ id: j.userId, role: "sef", name, email, ownerId: owner, venueIds, lang: "en" });
       saveDB(DB);
       render();
     } catch (e) {
