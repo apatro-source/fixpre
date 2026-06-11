@@ -54,6 +54,7 @@ const I18N_ROWS = [
   ["Daha Fazla", "More", "Mehr", "Ещё", "Más", "Altro"],
   ["Lokasyonlarım", "My Locations", "Meine Standorte", "Мои локации", "Mis ubicaciones", "Le mie sedi"],
   ["Lokasyonlar", "Locations", "Standorte", "Локации", "Ubicaciones", "Sedi"],
+  ["Lokasyon", "Location", "Standort", "Локация", "Ubicación", "Sede"],
   ["Yeni Lokasyon Ekle", "Add New Location", "Neuen Standort hinzufügen", "Добавить локацию", "Añadir ubicación", "Aggiungi sede"],
   ["Lokasyon adı", "Location name", "Standortname", "Название локации", "Nombre de ubicación", "Nome sede"],
   ["Lokasyon Ekle", "Add Location", "Standort hinzufügen", "Добавить локацию", "Añadir ubicación", "Aggiungi sede"],

@@ -1250,7 +1250,7 @@ function packagesView(u) {
     const cur = p.key === curKey;
     const feats = p.unlimited
       ? `<li>📍 Sınırsız</li><li>👨‍🍳 Sınırsız</li><li>👥 Sınırsız</li>`
-      : `<li>📍 ${p.venues} Mekan</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`;
+      : `<li>📍 ${p.venues} Lokasyon</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`;
     const price = p.price === "$0" ? "$0" : p.price.replace("/ay", "<span class='pkg-per'>/ay</span>");
     return `
       <div class="pkg-card pkg-${p.key} ${cur ? "current" : ""}">
