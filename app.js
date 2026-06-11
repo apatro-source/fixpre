@@ -63,6 +63,7 @@ function migrate(db) {
   if (!db.shiftReqs) db.shiftReqs = []; // vardiya/izin değişiklik talepleri
   if (!db.shiftDefs) db.shiftDefs = []; // vardiya tanımları: { id, ownerId, label, start, end }
   if (!db.shiftAssign) db.shiftAssign = []; // gün-vardiya ataması: { id, ownerId, userId, date, defId }
+  if (!db.approvals) db.approvals = { leave: "yonetici", shift: "yonetici" }; // onay yetkisi: "yonetici" | "sef"
   (db.tasks || []).forEach((t) => {
     if (!t.recurrence) t.recurrence = { type: "once" };
     if (!t.reads) t.reads = {};   // okundu bilgisi: { occKey: { userId: iso } }
@@ -119,7 +120,7 @@ const TOKEN_KEY = "fixpre_token";
 const UID_KEY = "fixpre_uid";
 
 function authToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
-function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [], shifts: [], shiftReqs: [], shiftDefs: [], shiftAssign: [] }; }
+function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [], shifts: [], shiftReqs: [], shiftDefs: [], shiftAssign: [], approvals: { leave: "yonetici", shift: "yonetici" } }; }
 
 function currentUser() {
   const id = localStorage.getItem(UID_KEY);
@@ -405,6 +406,20 @@ function isOff(userId, dateKey) {
 function orgWorkers(owner) {
   return [...orgChefs(owner), ...orgStaff(owner)];
 }
+// Onay yetkisi ayarı ("yonetici" | "sef")
+function approvalSetting(key) { return (DB.approvals && DB.approvals[key]) || "yonetici"; }
+// u, belirtilen personelin izin talebini onaylayabilir mi?
+function canApproveLeave(u, staffId) {
+  if (u.role === "yonetici") return true;
+  if (u.role === "sef" && approvalSetting("leave") === "sef") return visibleStaff(u).some((s) => s.id === staffId);
+  return false;
+}
+// u, belirtilen personelin vardiya/değişiklik talebini onaylayabilir mi?
+function canApproveShift(u, staffId) {
+  if (u.role === "yonetici") return true;
+  if (u.role === "sef" && approvalSetting("shift") === "sef") return visibleStaff(u).some((s) => s.id === staffId);
+  return false;
+}
 // Vardiya tanımları (A/B/C...) ve atamalar
 function orgShiftDefs(owner) { return (DB.shiftDefs || []).filter((d) => d.ownerId === owner); }
 function defById(id) { return (DB.shiftDefs || []).find((d) => d.id === id) || null; }
@@ -580,6 +595,18 @@ function mountProfile(u) {
           <button class="btn-ghost" id="sa_grant" style="width:100%;margin-top:10px">Yetkiyi Uygula</button>
           <div class="error-msg" id="sa_msg"></div>
         </div>` : ""}
+        ${u.role === "yonetici" ? `
+        <div class="field" style="border-top:1px solid var(--border);padding-top:12px">
+          <label>✅ Onay Yetkileri — talepleri kim onaylasın?</label>
+          <div class="field"><label>İzin / Mesai talepleri</label><select id="ap_leave">
+            <option value="yonetici"${approvalSetting("leave") === "yonetici" ? " selected" : ""}>Sadece yönetici onaylar</option>
+            <option value="sef"${approvalSetting("leave") === "sef" ? " selected" : ""}>Şefler de (kendi personeli)</option>
+          </select></div>
+          <div class="field"><label>Vardiya / değişiklik talepleri</label><select id="ap_shift">
+            <option value="yonetici"${approvalSetting("shift") === "yonetici" ? " selected" : ""}>Sadece yönetici onaylar</option>
+            <option value="sef"${approvalSetting("shift") === "sef" ? " selected" : ""}>Şefler de (kendi personeli)</option>
+          </select></div>
+        </div>` : ""}
         <div class="form-actions">
           <button class="btn-primary" id="pf_save">Kaydet</button>
           <button class="btn-ghost" id="pf_cancel">İptal</button>
@@ -645,6 +672,14 @@ function mountProfile(u) {
       u.name = name;
       u.lang = lang;
       localStorage.setItem("fixpre_lang", lang); // cihaz dili de güncel kalsın
+      // Yönetici: onay yetkileri
+      const apL = document.getElementById("ap_leave");
+      const apS = document.getElementById("ap_shift");
+      if (apL && apS) {
+        if (!DB.approvals) DB.approvals = {};
+        DB.approvals.leave = apL.value;
+        DB.approvals.shift = apS.value;
+      }
       saveDB(DB);
       showProfile = false;
       render();
@@ -811,14 +846,18 @@ function renderManager(u) {
   const isOwner = u.role === "yonetici";
   const openReports = incomingReports(u).filter((r) => r.status === "acik").length;
   const bildirimLabel = "Talepler" + (openReports ? ` (${openReports})` : "");
+  const leaveApproveCnt = (u.role === "sef" && approvalSetting("leave") === "sef")
+    ? orgLeaves(ownerIdOf(u)).filter((l) => l.status === "beklemede" && canApproveLeave(u, l.createdBy)).length : 0;
   const leaveCount = isOwner
     ? orgLeaves(ownerIdOf(u)).filter((l) => l.status === "beklemede").length
-    : myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length;
+    : myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length + leaveApproveCnt;
   const izinLabel = "İzin / Mesai" + (leaveCount ? ` (${leaveCount})` : "");
+  const shiftApproveCnt = (u.role === "sef" && approvalSetting("shift") === "sef")
+    ? (DB.shiftReqs || []).filter((r) => r.ownerId === ownerIdOf(u) && r.status === "beklemede" && canApproveShift(u, r.requesterId)).length : 0;
   const vardiyaCount = isOwner
     ? (DB.shiftReqs || []).filter((r) => r.ownerId === ownerIdOf(u) && r.status === "beklemede").length
     : (DB.shiftReqs || []).filter((r) => (r.withUserId === u.id && r.status === "personel_onay") ||
-        (r.requesterId === u.id && (r.status === "onaylandi" || r.status === "reddedildi") && !r.seenByReporter)).length;
+        (r.requesterId === u.id && (r.status === "onaylandi" || r.status === "reddedildi") && !r.seenByReporter)).length + shiftApproveCnt;
   const vardiyaLabel = "Vardiya" + (vardiyaCount ? ` (${vardiyaCount})` : "");
   const tabs = isOwner
     ? [
@@ -1274,7 +1313,7 @@ function shiftReqCard(u, r) {
     : approved ? `<span class="badge badge-done">Onaylandı</span>`
     : `<span class="badge badge-rej">Reddedildi</span>`;
   const canColleague = colleagueStage && r.withUserId === u.id;
-  const canMgr = mgrStage && u.role === "yonetici";
+  const canMgr = mgrStage && canApproveShift(u, r.requesterId);
   return `
     <div class="report ${approved ? "resolved" : ""} ${rejected ? "rejected" : ""}">
       <div class="report-head"><span class="rcat">${typeLabel}</span>${st}</div>
@@ -1364,12 +1403,13 @@ function shiftView(u) {
       </details>`;
   }
 
+  const canApproveAny = u.role === "yonetici" || (u.role === "sef" && approvalSetting("shift") === "sef");
   let mgrReqs = "";
-  if (isMgr) {
-    const pend = (DB.shiftReqs || []).filter((r) => r.ownerId === owner && r.status === "beklemede")
+  if (canApproveAny) {
+    const pend = (DB.shiftReqs || []).filter((r) => r.ownerId === owner && r.status === "beklemede" && canApproveShift(u, r.requesterId))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     mgrReqs = `
-      <div class="section-title" style="margin-top:20px">Bekleyen Değişiklik Talepleri (${pend.length})</div>
+      <div class="section-title" style="margin-top:20px">Onayınızı Bekleyen Talepler (${pend.length})</div>
       ${pend.length ? pend.map((r) => shiftReqCard(u, r)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}`;
   }
 
@@ -1563,8 +1603,13 @@ function wireShift(u) {
     };
     DB.shiftReqs.push(req);
     saveDB(DB);
-    if (withType) notifyUsers([withUserId], "Takas talebi onayınızı bekliyor", u.name, "/");
-    else notifyUsers([owner], "İzin/değişiklik talebi", u.name, "/");
+    if (withType) {
+      notifyUsers([withUserId], "Takas talebi onayınızı bekliyor", u.name, "/");
+    } else {
+      const recips = [owner];
+      if (approvalSetting("shift") === "sef" && u.chefId) recips.push(u.chefId);
+      notifyUsers(recips, "İzin/değişiklik talebi", u.name, "/");
+    }
     render();
   };
 
@@ -1581,9 +1626,12 @@ function colleagueDecide(id, ok, u) {
   const r = (DB.shiftReqs || []).find((x) => x.id === id);
   if (!r || r.withUserId !== u.id || r.status !== "personel_onay") return;
   if (ok) {
-    r.status = "beklemede"; r.colleagueOk = true;   // sıra yöneticide
+    r.status = "beklemede"; r.colleagueOk = true;   // sıra onaylayanda (yönetici/şef)
     saveDB(DB);
-    notifyUsers([r.ownerId], "Takas — personel onayladı", u.name, "/");
+    const recips = [r.ownerId];
+    const reqUser = userById(r.requesterId);
+    if (approvalSetting("shift") === "sef" && reqUser && reqUser.chefId) recips.push(reqUser.chefId);
+    notifyUsers(recips, "Takas — personel onayladı", u.name, "/");
   } else {
     r.status = "reddedildi"; r.colleagueOk = false;
     r.decisionNote = "Takas edilen personel reddetti";
@@ -2767,7 +2815,16 @@ function leavesView(u) {
   // personel / şef
   const mine = myLeaves(u).sort(byDate);
   const bal = mesaiBalance(u.id, owner);
+  // Şef onay yetkisi varsa: kendi personelinin bekleyen izin/mesai talepleri
+  let approveBlock = "";
+  if (u.role === "sef" && approvalSetting("leave") === "sef") {
+    const pend = orgLeaves(owner).filter((l) => l.status === "beklemede" && canApproveLeave(u, l.createdBy)).sort(byDate);
+    approveBlock = `
+      <div class="section-title">Onayınızı Bekleyen Talepler (${pend.length})</div>
+      ${pend.length ? pend.map((l) => leaveCard(u, l, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}`;
+  }
   return `
+    ${approveBlock}
     <div class="card balance-card">
       <div class="balance-label">Mesai Durumunuz</div>
       ${balanceBadge(bal)}
@@ -2819,7 +2876,9 @@ function wireLeaves(u) {
       decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
     });
     saveDB(DB);
-    notifyUsers([ownerIdOf(u)], "Yeni izin/mesai talebi", u.name, "/");
+    const leaveRecips = [ownerIdOf(u)];
+    if (approvalSetting("leave") === "sef" && u.chefId) leaveRecips.push(u.chefId);
+    notifyUsers(leaveRecips, "Yeni izin/mesai talebi", u.name, "/");
     render();
   };
 
