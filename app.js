@@ -104,6 +104,7 @@ function migrate(db) {
 
 // Bulut senkron durumu — loadDB() saveDB→cloudPush çağırdığı için BUNLAR loadDB'den ÖNCE tanımlanmalı (TDZ hatası olmasın)
 let cloudEnabled = false;
+let cloudReady = false;   // ilk bulut verisi gelene kadar push YAPMA (eski veriyle üzerine yazma olmasın)
 let lastAppliedAt = null;
 let pushTimer = null;
 let pushing = false;
@@ -3440,13 +3441,12 @@ async function dataPut(data) {
 
 // Değişiklikleri (kısa gecikmeyle) organizasyonun satırına yaz
 function cloudPush(db) {
-  if (!cloudEnabled || !authToken()) return;
+  if (!cloudEnabled || !cloudReady || !authToken()) return;   // ilk bulut verisi gelmeden push yok
   clearTimeout(pushTimer);
-  const snapshot = JSON.stringify(db);
   pushTimer = setTimeout(async () => {
     pushing = true;
     try {
-      const res = await dataPut(JSON.parse(snapshot));
+      const res = await dataPut(DB);   // ANLIK güncel veriyi gönder (eski snapshot değil)
       lastAppliedAt = res.updatedAt;
     } catch (e) { /* sessiz; localStorage yedeği var */ }
     finally { pushing = false; }
@@ -3464,12 +3464,16 @@ async function cloudBootstrap() {
         DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt;
         render();   // taze veri gelince arka planda yenile
       }
+      cloudReady = true;   // bulut başarıyla okundu -> push güvenli
     } catch (e) {
       if (String(e.message) === "401") { // token geçersiz/süresi dolmuş -> çıkış
         localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(UID_KEY); DB = emptyDB();
-        render();
+        cloudReady = true; render();
       }
+      // ağ hatası: cloudReady FALSE kalır; poll başarılı olunca açılır (eski veriyi yazma riski yok)
     }
+  } else {
+    cloudReady = true;   // giriş yok, kaybedilecek bulut verisi yok
   }
   startPolling();
 }
@@ -3484,6 +3488,7 @@ async function pollOnce() {
   if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
   try {
     const res = await dataGet();
+    cloudReady = true;   // başarılı bulut okuması -> push artık güvenli (açılışta ağ koptuysa kurtarır)
     if (res && res.plan) orgPlan = res.plan;
     if (res && res.data && res.updatedAt && res.updatedAt !== lastAppliedAt) {
       DB = migrate(res.data);
