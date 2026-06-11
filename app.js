@@ -108,9 +108,9 @@ const SUPER_EMAIL = "h.dirmilli48@gmail.com";   // sınırsız + yetki veren hes
 // Satış paketleri (USD). Süper admin panelinde tek tık doldurma için.
 const PACKAGES = [
   { key: "free",  name: "Deneme",       venues: 1, chefs: 1, staff: 4,  unlimited: false, price: "$0" },
-  { key: "start", name: "Başlangıç",    venues: 1, chefs: 2, staff: 15, unlimited: false, price: "$19/ay" },
-  { key: "pro",   name: "Profesyonel",  venues: 3, chefs: 6, staff: 50, unlimited: false, price: "$49/ay" },
-  { key: "corp",  name: "Kurumsal",     venues: 1, chefs: 1, staff: 1,  unlimited: true,  price: "$99/ay" },
+  { key: "start", name: "Başlangıç",    venues: 1, chefs: 2, staff: 15, unlimited: false, price: "$9/ay" },
+  { key: "pro",   name: "Profesyonel",  venues: 3, chefs: 6, staff: 50, unlimited: false, price: "$24/ay" },
+  { key: "corp",  name: "Kurumsal",     venues: 1, chefs: 1, staff: 1,  unlimited: true,  price: "$49/ay" },
 ];
 let orgPlan = { maxVenues: 1, maxStaff: 4, maxChefs: 1, unlimited: false }; // demo varsayılan; sunucudan güncellenir
 
