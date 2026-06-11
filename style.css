@@ -543,6 +543,8 @@ button.sh-cell { cursor: pointer; }
 button.sh-cell:hover { background: #eef1f8; }
 .sh-cell.off { background: #fff7ed; }
 .sh-cell.on { background: #f0fdf4; }
+.sh-cell.shift { background: #eef2ff; }
+.sh-lab { font-size: 14px; font-weight: 800; color: var(--primary); }
 
 /* ---- Modal ---- */
 .modal-overlay {

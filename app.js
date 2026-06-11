@@ -61,6 +61,8 @@ function migrate(db) {
   if (!db.announcements) db.announcements = []; // duyurular
   if (!db.shifts) db.shifts = [];     // onaylı izin/off günleri: { id, ownerId, userId, date, reason, by }
   if (!db.shiftReqs) db.shiftReqs = []; // vardiya/izin değişiklik talepleri
+  if (!db.shiftDefs) db.shiftDefs = []; // vardiya tanımları: { id, ownerId, label, start, end }
+  if (!db.shiftAssign) db.shiftAssign = []; // gün-vardiya ataması: { id, ownerId, userId, date, defId }
   (db.tasks || []).forEach((t) => {
     if (!t.recurrence) t.recurrence = { type: "once" };
     if (!t.reads) t.reads = {};   // okundu bilgisi: { occKey: { userId: iso } }
@@ -117,7 +119,7 @@ const TOKEN_KEY = "fixpre_token";
 const UID_KEY = "fixpre_uid";
 
 function authToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
-function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [], shifts: [], shiftReqs: [] }; }
+function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [], shifts: [], shiftReqs: [], shiftDefs: [], shiftAssign: [] }; }
 
 function currentUser() {
   const id = localStorage.getItem(UID_KEY);
@@ -402,6 +404,26 @@ function isOff(userId, dateKey) {
 // Org'daki tüm çalışanlar (şefler + personel) — herkes birbirini görür
 function orgWorkers(owner) {
   return [...orgChefs(owner), ...orgStaff(owner)];
+}
+// Vardiya tanımları (A/B/C...) ve atamalar
+function orgShiftDefs(owner) { return (DB.shiftDefs || []).filter((d) => d.ownerId === owner); }
+function defById(id) { return (DB.shiftDefs || []).find((d) => d.id === id) || null; }
+function assignOf(userId, dateKey) { return (DB.shiftAssign || []).find((a) => a.userId === userId && a.date === dateKey) || null; }
+// Bir hücrenin durumu: izinli / vardiya atanmış / sade çalışıyor
+function cellState(userId, dateKey) {
+  if (isOff(userId, dateKey)) return { kind: "off" };
+  const a = assignOf(userId, dateKey);
+  if (a) return { kind: "assign", defId: a.defId };
+  return { kind: "work" };
+}
+// Hücreyi tek bir duruma getir (önce eski off + atamayı temizle)
+function setCell(owner, userId, dateKey, kind, byId, defId) {
+  for (let i = (DB.shifts || []).length - 1; i >= 0; i--)
+    if (DB.shifts[i].userId === userId && DB.shifts[i].date === dateKey) DB.shifts.splice(i, 1);
+  for (let i = (DB.shiftAssign || []).length - 1; i >= 0; i--)
+    if (DB.shiftAssign[i].userId === userId && DB.shiftAssign[i].date === dateKey) DB.shiftAssign.splice(i, 1);
+  if (kind === "off") DB.shifts.push({ id: uid(), ownerId: owner, userId, date: dateKey, reason: "Yönetici", by: byId });
+  else if (kind === "assign" && defId) DB.shiftAssign.push({ id: uid(), ownerId: owner, userId, date: dateKey, defId, by: byId });
 }
 
 // Görev belirli bir günde aktif mi? (once hariç — recurring için)
@@ -1262,17 +1284,57 @@ function shiftView(u) {
     }).join("")}
   </div>`;
 
+  const cellInner = (userId, dk) => {
+    const st = cellState(userId, dk);
+    if (st.kind === "off") return { cls: "off", html: "🏖️", title: "İzinli" };
+    if (st.kind === "assign") {
+      const d = defById(st.defId);
+      return d
+        ? { cls: "shift", html: `<span class="sh-lab">${esc(d.label)}</span>`, title: `${d.label} ${d.start}–${d.end}` }
+        : { cls: "on", html: "✅", title: "Çalışıyor" };
+    }
+    return { cls: "on", html: "✅", title: "Çalışıyor" };
+  };
   const rows = people.length ? people.map((p) => `
     <div class="sh-row">
       <div class="sh-name">${roleIcon(p)} ${esc(p.name)}</div>
       ${dates.map((dk) => {
-        const off = isOff(p.id, dk);
-        const ic = off ? "🏖️" : "✅";
+        const c = cellInner(p.id, dk);
         return isMgr
-          ? `<button class="sh-cell ${off ? "off" : "on"}" data-shift="${p.id}|${dk}" title="${off ? "İzinli — çalışana çevir" : "Çalışıyor — izinli yap"}">${ic}</button>`
-          : `<div class="sh-cell ${off ? "off" : "on"}">${ic}</div>`;
+          ? `<button class="sh-cell ${c.cls}" data-shift="${p.id}|${dk}" title="${c.title}">${c.html}</button>`
+          : `<div class="sh-cell ${c.cls}" title="${c.title}">${c.html}</div>`;
       }).join("")}
     </div>`).join("") : `<div class="empty">Kişi yok.</div>`;
+
+  // Açıklama (legend) — tanımlı vardiyalar + saatleri
+  const defs = orgShiftDefs(owner);
+  const legend = `<p style="color:var(--muted);font-size:13px;margin:6px 0 12px">`
+    + defs.map((d) => `<strong>${esc(d.label)}</strong> ${d.start}–${d.end}`).join(" · ")
+    + (defs.length ? " · " : "")
+    + `✅ Çalışıyor · 🏖️ İzinli${isMgr ? " · Hücreye tıkla: ✅→" + (defs.length ? defs.map((d) => esc(d.label)).join("→") + "→" : "") + "🏖️" : ""}</p>`;
+
+  // Yönetici: vardiya tanımları (A 08:00–17:00 gibi)
+  let defBlock = "";
+  if (isMgr) {
+    defBlock = `
+      <details class="cat" style="margin:14px 0">
+        <summary><span>⚙️ Vardiya Tanımları (${defs.length})</span></summary>
+        <div class="cat-body" style="padding:14px">
+          ${defs.length ? defs.map((d) => `
+            <div class="list-item">
+              <div><div class="title">${esc(d.label)}</div><div class="meta">${d.start} – ${d.end}</div></div>
+              <button class="btn-danger btn-sm" data-del-def="${d.id}">Sil</button>
+            </div>`).join("") : `<div class="empty">Henüz vardiya yok. Örn: A 08:00–17:00, B 13:30–22:00.</div>`}
+          <div class="row" style="margin-top:10px">
+            <div class="field"><label>Etiket</label><input id="def_label" placeholder="A" maxlength="6" /></div>
+            <div class="field"><label>Başlangıç</label><input id="def_start" type="time" value="08:00" /></div>
+            <div class="field"><label>Bitiş</label><input id="def_end" type="time" value="17:00" /></div>
+          </div>
+          <button class="btn-primary" id="def_add">Vardiya Ekle</button>
+          <div class="error-msg" id="def_err"></div>
+        </div>
+      </details>`;
+  }
 
   let mgrReqs = "";
   if (isMgr) {
@@ -1327,8 +1389,9 @@ function shiftView(u) {
       <span class="shift-range">${fmtDayShort(dates[0])} – ${fmtDayShort(dates[6])}${shiftWeekOffset === 0 ? " · Bu hafta" : ""}</span>
       <button class="btn-ghost btn-sm" id="sh_next">Sonraki →</button>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin:6px 0 12px">✅ Çalışıyor · 🏖️ İzinli${isMgr ? " · Hücreye tıklayıp değiştirin" : ""}</p>
+    ${legend}
     <div class="shift-grid">${head}${rows}</div>
+    ${defBlock}
     ${mgrReqs}
     ${reqBlock}
   `;
@@ -1343,7 +1406,11 @@ function decideShiftReq(id, status, u) {
   r.decidedBy = u.id; r.decidedAt = new Date().toISOString(); r.seenByReporter = false;
   if (status === "onaylandi") {
     const addOff = (userId, dk) => {
-      if (dk && !DB.shifts.some((s) => s.userId === userId && s.date === dk))
+      if (!dk) return;
+      // o gün varsa vardiya atamasını kaldır
+      for (let i = (DB.shiftAssign || []).length - 1; i >= 0; i--)
+        if (DB.shiftAssign[i].userId === userId && DB.shiftAssign[i].date === dk) DB.shiftAssign.splice(i, 1);
+      if (!DB.shifts.some((s) => s.userId === userId && s.date === dk))
         DB.shifts.push({ id: uid(), ownerId: r.ownerId, userId, date: dk, reason: "Talep onayı", by: u.id });
     };
     const removeOff = (userId, dk) => {
@@ -1378,13 +1445,42 @@ function wireShift(u) {
   const next = document.getElementById("sh_next");
   if (next) next.onclick = () => { shiftWeekOffset++; render(); };
 
-  // Yönetici: hücreye tıkla → izinli/çalışıyor değiştir
+  // Yönetici: hücreye tıkla → çalışıyor → vardiyalar (A,B,C…) → izinli → çalışıyor
   document.querySelectorAll("[data-shift]").forEach((b) => {
     b.onclick = () => {
       const [pid, dk] = b.dataset.shift.split("|");
-      const idx = (DB.shifts || []).findIndex((s) => s.userId === pid && s.date === dk);
-      if (idx >= 0) DB.shifts.splice(idx, 1);
-      else DB.shifts.push({ id: uid(), ownerId: owner, userId: pid, date: dk, reason: "Yönetici", by: u.id });
+      const defs = orgShiftDefs(owner);
+      const st = cellState(pid, dk);
+      let nextKind = "work", nextDef = null;
+      if (st.kind === "work") {
+        if (defs.length) { nextKind = "assign"; nextDef = defs[0].id; } else nextKind = "off";
+      } else if (st.kind === "assign") {
+        const i = defs.findIndex((d) => d.id === st.defId);
+        if (i >= 0 && i < defs.length - 1) { nextKind = "assign"; nextDef = defs[i + 1].id; } else nextKind = "off";
+      } else { nextKind = "work"; }
+      setCell(owner, pid, dk, nextKind, u.id, nextDef);
+      saveDB(DB); render();
+    };
+  });
+
+  // Yönetici: vardiya tanımı ekle / sil
+  const defAdd = document.getElementById("def_add");
+  if (defAdd) defAdd.onclick = () => {
+    const label = document.getElementById("def_label").value.trim();
+    const start = document.getElementById("def_start").value;
+    const end = document.getElementById("def_end").value;
+    const err = document.getElementById("def_err");
+    if (!label) { err.textContent = "Etiket girin (ör. A)."; return; }
+    if (!start || !end) { err.textContent = "Başlangıç ve bitiş saati girin."; return; }
+    DB.shiftDefs.push({ id: uid(), ownerId: owner, label, start, end });
+    saveDB(DB); render();
+  };
+  document.querySelectorAll("[data-del-def]").forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.delDef;
+      const i = DB.shiftDefs.findIndex((d) => d.id === id);
+      if (i >= 0) DB.shiftDefs.splice(i, 1);
+      DB.shiftAssign = (DB.shiftAssign || []).filter((a) => a.defId !== id);
       saveDB(DB); render();
     };
   });
