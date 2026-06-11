@@ -156,6 +156,8 @@ const I18N_ROWS = [
   ["Etiket girin (ör. A).", "Enter a label (e.g. A).", "Bezeichnung eingeben (z.B. A).", "Введите метку (напр. A).", "Ingrese una etiqueta (p.ej. A).", "Inserisci un'etichetta (es. A)."],
   ["Başlangıç ve bitiş saati girin.", "Enter start and end time.", "Start- und Endzeit eingeben.", "Введите время начала и конца.", "Ingrese hora de inicio y fin.", "Inserisci ora di inizio e fine."],
   ["Hücreye tıkla: ", "Click cell: ", "Zelle klicken: ", "Нажмите ячейку: ", "Clic en celda: ", "Clicca cella: "],
+  ["📍 Lokasyonsuz (", "📍 No location (", "📍 Ohne Standort (", "📍 Без локации (", "📍 Sin ubicación (", "📍 Senza sede ("],
+  ["Bu lokasyonda kişi yok.", "No one at this location.", "Niemand an diesem Standort.", "Никого в этой локации.", "Nadie en esta ubicación.", "Nessuno in questa sede."],
   ["Vardiya değişikliği (yöneticiye)", "Shift change (to manager)", "Schichtänderung (an Manager)", "Смена графика (менеджеру)", "Cambio de turno (al gerente)", "Cambio turno (al manager)"],
   ["Vardiya takası (arkadaşla)", "Shift swap (with colleague)", "Schichttausch (mit Kollegen)", "Обмен сменами (с коллегой)", "Intercambio de turno (con compañero)", "Scambio turno (con collega)"],
   ["İzin günü takası (arkadaşla)", "Day-off swap (with colleague)", "Tausch freier Tag (mit Kollegen)", "Обмен выходными (с коллегой)", "Intercambio de día libre (con compañero)", "Scambio giorno libero (con collega)"],

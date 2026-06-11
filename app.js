@@ -1529,23 +1529,42 @@ function shiftView(u) {
     }
     return { cls: "on", html: "✅", title: "Çalışıyor" };
   };
-  const rows = people.length ? people.map((p) => `
-    <div class="sh-row">
-      <div class="sh-name">${roleIcon(p)} ${esc(p.name)}</div>
-      ${dates.map((dk) => {
-        const c = cellInner(p.id, dk);
-        return isMgr
-          ? `<button class="sh-cell ${c.cls}" data-shift="${p.id}|${dk}" title="${c.title}">${c.html}</button>`
-          : `<div class="sh-cell ${c.cls}" title="${c.title}">${c.html}</div>`;
-      }).join("")}
-    </div>`).join("") : `<div class="empty">Kişi yok.</div>`;
+  // Şef onay yetkisi varsa kendi lokasyonunun ızgarasını da düzenleyebilir (kontrol yöneticide)
+  const canEdit = isMgr || (u.role === "sef" && approvalSetting("shift") === "sef");
+  const gridFor = (ppl) => {
+    const rows = ppl.length ? ppl.map((p) => `
+      <div class="sh-row">
+        <div class="sh-name">${roleIcon(p)} ${esc(p.name)}</div>
+        ${dates.map((dk) => {
+          const c = cellInner(p.id, dk);
+          return canEdit
+            ? `<button class="sh-cell ${c.cls}" data-shift="${p.id}|${dk}" title="${c.title}">${c.html}</button>`
+            : `<div class="sh-cell ${c.cls}" title="${c.title}">${c.html}</div>`;
+        }).join("")}
+      </div>`).join("") : `<div class="empty" style="padding:12px">Bu lokasyonda kişi yok.</div>`;
+    return `<div class="shift-grid">${head}${rows}</div>`;
+  };
+  // Lokasyonlara göre kategori (açılır)
+  const vlist = isMgr ? orgVenues(owner) : visibleVenues(u);
+  const groupsHtml = vlist.map((v) => {
+    const ppl = people.filter((p) => (p.venueIds || []).includes(v.id));
+    return `<details class="cat" open style="margin-bottom:12px">
+      <summary><span>📍 ${esc(v.name)} (${ppl.length})</span></summary>
+      <div class="cat-body" style="padding:10px">${gridFor(ppl)}</div>
+    </details>`;
+  }).join("");
+  const noVenue = isMgr ? people.filter((p) => !((p.venueIds || []).length)) : [];
+  const noVenueHtml = noVenue.length
+    ? `<details class="cat" style="margin-bottom:12px"><summary><span>📍 Lokasyonsuz (${noVenue.length})</span></summary><div class="cat-body" style="padding:10px">${gridFor(noVenue)}</div></details>`
+    : "";
+  const gridSection = vlist.length ? (groupsHtml + noVenueHtml) : gridFor(people);
 
   // Açıklama (legend) — tanımlı vardiyalar + saatleri
   const defs = orgShiftDefs(owner);
   const legend = `<p style="color:var(--muted);font-size:13px;margin:6px 0 12px">`
     + defs.map((d) => `<strong>${esc(d.label)}</strong> ${d.start}–${d.end}`).join(" · ")
     + (defs.length ? " · " : "")
-    + `✅ Çalışıyor · 🏖️ İzinli${isMgr ? " · Hücreye tıkla: ✅→" + (defs.length ? defs.map((d) => esc(d.label)).join("→") + "→" : "") + "🏖️" : ""}</p>`;
+    + `✅ Çalışıyor · 🏖️ İzinli${canEdit ? " · Hücreye tıkla: ✅→" + (defs.length ? defs.map((d) => esc(d.label)).join("→") + "→" : "") + "🏖️" : ""}</p>`;
 
   // Yönetici: vardiya tanımları (A 08:00–17:00 gibi)
   let defBlock = "";
@@ -1629,7 +1648,7 @@ function shiftView(u) {
       <button class="btn-ghost btn-sm" id="sh_next">Sonraki →</button>
     </div>
     ${legend}
-    <div class="shift-grid">${head}${rows}</div>
+    ${gridSection}
     ${defBlock}
     ${mgrReqs}
     ${reqBlock}
