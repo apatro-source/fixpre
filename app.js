@@ -282,7 +282,11 @@ function visibleStaff(u) {
 }
 function visibleTasks(u) {
   const all = orgTasks(ownerIdOf(u));
-  return u.role === "sef" ? all.filter((t) => t.createdBy === u.id) : all;
+  if (u.role !== "sef") return all;
+  // Şef: sorumlu olduğu LOKASYONDAKİ tüm görevler (kim oluşturmuş olursa olsun) + kendi mekansız görevleri.
+  // Böylece bir şef başka lokasyona geçince, yeni gelen şef o lokasyonun görevlerini devralıp yönetebilir.
+  const myV = u.venueIds || [];
+  return all.filter((t) => (t.venueId && myV.includes(t.venueId)) || (!t.venueId && t.createdBy === u.id));
 }
 
 // Bir göreve atanabilecek kişiler:
@@ -1098,7 +1102,8 @@ function renderManager(u) {
 function taskEditModal(u) {
   const t = DB.tasks.find((x) => x.id === editingTask);
   if (!t || t.ownerId !== ownerIdOf(u)) return "";
-  if (u.role === "sef" && t.createdBy !== u.id) return "";
+  // Şef: kendi oluşturduğu VEYA kendi lokasyonundaki görevi düzenleyebilir (devralma)
+  if (u.role === "sef" && !(t.createdBy === u.id || (t.venueId && (u.venueIds || []).includes(t.venueId)))) return "";
   const staff = assignableUsers(u);
   const venues = visibleVenues(u);
   const rec = t.recurrence || { type: "once" };
