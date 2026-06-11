@@ -389,6 +389,7 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 }
 .tag.venue { background: #fff4d6; color: #b45309; }
 .tag.rec { background: #dbf4ff; color: #0369a1; }
+.tag.duetime { background: #fee2e2; color: #b91c1c; font-weight: 700; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
 
 /* Okunma durumu — tıklayınca açılır */

@@ -1149,6 +1149,7 @@ function taskEditModal(u) {
             ${Array.from({ length: 31 }, (_, i) => i + 1).map((n) => `<label class="check-pill mini ${mdates.includes(n) ? "sel" : ""}"><input type="checkbox" class="et_mday" value="${n}" ${mdates.includes(n) ? "checked" : ""} />${n}</label>`).join("")}
           </div>
         </div>
+        <div class="field"><label>⏰ Son yapılma saati (opsiyonel) — bitmesine 1 saat kala uyarı gider</label><input id="et_duetime" type="time" value="${t.dueTime || ""}" /></div>
         <div class="field"><label>Atanan personel (birden fazla seçebilirsiniz)</label><div class="checks">${staffChecks}</div></div>
         <div class="form-actions">
           <button class="btn-primary" id="et_save">Kaydet</button>
@@ -1204,6 +1205,7 @@ function wireTaskEdit(u) {
     t.venueId = venueId;
     t.recurrence = recurrence;
     t.assignedUserIds = assignees;
+    t.dueTime = document.getElementById("et_duetime").value || null;
     saveDB(DB);
     editingTask = null;
     render();
@@ -1978,6 +1980,10 @@ function mgrTasks(u) {
         </div>
       </div>
       <div class="field">
+        <label>⏰ Son yapılma saati (opsiyonel) — bitmesine 1 saat kala personele uyarı gider</label>
+        <input id="t_duetime" type="time" />
+      </div>
+      <div class="field">
         <label>Atanacak personel (birden fazla seçebilirsiniz)</label>
         <div class="checks">${staffChecks}</div>
       </div>
@@ -2056,6 +2062,7 @@ function mgrTaskCard(t) {
         <span class="tag rec">🔁 ${recurrenceLabel(t)}</span>
         ${venue ? `<span class="tag venue">📍 ${esc(venue.name)}</span>` : ""}
         <span class="tag">👥 ${esc(assigneeNames)}</span>
+        ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
         <span class="tag">Oluşturuldu: ${fmtDate(t.createdAt)}</span>
       </div>
@@ -2111,6 +2118,7 @@ function wireMgrTasks(u) {
       venueId,
       recurrence,
       dueAt: dueRaw ? new Date(dueRaw).toISOString() : null,
+      dueTime: document.getElementById("t_duetime").value || null,   // günlük son saat (HH:MM)
       assignedUserIds: assignees,
       createdAt: new Date().toISOString(),
       completions: {},
@@ -3406,6 +3414,7 @@ function staffTaskCard(t, u, extra = "") {
       <div class="task-tags">
         <span class="tag rec">🔁 ${recurrenceLabel(t)}</span>
         ${venue ? `<span class="tag venue">📍 ${esc(venue.name)}</span>` : ""}
+        ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
         ${others.length ? `<span class="tag">+${others.length} kişi daha atanmış</span>` : ""}
       </div>
