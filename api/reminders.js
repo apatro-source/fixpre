@@ -7,6 +7,7 @@ const webpush = require("web-push");
 const VAPID_PUBLIC = "BJ-IwLxYsUxi3FBjcdKbsTfRo-XkBRHE3kck5-lNIDAz_2hs085MnLWff2RHriSjmfouHdLnC_AzYPyqx8ZId4o";
 const TZ_OFFSET_MIN = 3 * 60;          // Türkiye UTC+3
 const REMIND_BEFORE_MIN = 60;          // bitmesine 1 saat kala
+const WINDOW_MIN = 15;                 // tetik aralığı: [bitiş-60dk, bitiş-45dk) — hep ~1 saat kala gider
 
 function occursToday(t, d) {            // d: Türkiye'ye kaydırılmış tarih (getUTC* ile okunur)
   const r = t.recurrence || { type: "once" };
@@ -49,7 +50,7 @@ module.exports = async (req, res) => {
         const [hh, mm] = t.dueTime.split(":").map(Number);
         const dueMin = hh * 60 + mm;
         const remindMin = dueMin - REMIND_BEFORE_MIN;
-        if (nowMin < remindMin || nowMin >= dueMin) continue;          // sadece [bitiş-1s, bitiş) aralığı
+        if (nowMin < remindMin || nowMin >= remindMin + WINDOW_MIN) continue;   // sadece "~1 saat kala" aralığı (geç kalmaz)
         const ck = occKey(t, dateKey);
         if (t.completions && t.completions[ck]) continue;              // bugün zaten yapılmış
         const recips = Array.isArray(t.assignedUserIds) ? t.assignedUserIds : [];
