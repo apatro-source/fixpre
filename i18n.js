@@ -52,6 +52,15 @@ const I18N_ROWS = [
   ["Kayıtlar", "Records", "Aufzeichnungen", "Записи", "Registros", "Registri"],
   ["Ekip", "Team", "Team", "Команда", "Equipo", "Team"],
   ["Daha Fazla", "More", "Mehr", "Ещё", "Más", "Altro"],
+  ["Lokasyonlarım", "My Locations", "Meine Standorte", "Мои локации", "Mis ubicaciones", "Le mie sedi"],
+  ["Lokasyonlar", "Locations", "Standorte", "Локации", "Ubicaciones", "Sedi"],
+  ["Yeni Lokasyon Ekle", "Add New Location", "Neuen Standort hinzufügen", "Добавить локацию", "Añadir ubicación", "Aggiungi sede"],
+  ["Lokasyon adı", "Location name", "Standortname", "Название локации", "Nombre de ubicación", "Nome sede"],
+  ["Lokasyon Ekle", "Add Location", "Standort hinzufügen", "Добавить локацию", "Añadir ubicación", "Aggiungi sede"],
+  ["Görevleri görmek için bir lokasyona tıklayın.", "Click a location to see its tasks.", "Klicken Sie auf einen Standort, um Aufgaben zu sehen.", "Нажмите локацию, чтобы увидеть задачи.", "Haga clic en una ubicación para ver las tareas.", "Clicca una sede per vedere le attività."],
+  ["Henüz lokasyon yok.", "No locations yet.", "Noch keine Standorte.", "Локаций пока нет.", "Aún no hay ubicaciones.", "Ancora nessuna sede."],
+  ["Size atanmış lokasyon yok.", "No locations assigned to you.", "Ihnen sind keine Standorte zugewiesen.", "Вам не назначены локации.", "No tiene ubicaciones asignadas.", "Nessuna sede assegnata."],
+  ["Lokasyon adı gerekli.", "Location name required.", "Standortname erforderlich.", "Требуется название локации.", "Se requiere el nombre de la ubicación.", "Nome sede obbligatorio."],
 
   // --- Vardiya ---
   ["Haftalık Vardiya", "Weekly Shifts", "Wochenschichten", "Недельные смены", "Turnos semanales", "Turni settimanali"],

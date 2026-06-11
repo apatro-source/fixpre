@@ -247,7 +247,10 @@ function visibleVenues(u) {
 }
 function visibleStaff(u) {
   const all = orgStaff(ownerIdOf(u));
-  return u.role === "sef" ? all.filter((s) => s.chefId === u.id) : all;
+  // Şef: kendi sorumlu olduğu lokasyonlardaki TÜM personel (kim eklemiş olursa olsun)
+  return u.role === "sef"
+    ? all.filter((s) => (s.venueIds || []).some((v) => (u.venueIds || []).includes(v)))
+    : all;
 }
 function visibleTasks(u) {
   const all = orgTasks(ownerIdOf(u));
@@ -890,7 +893,7 @@ function renderManager(u) {
     ? [
         { k: "bugun", l: "Pano" },
         { k: "gorevler", l: "Tüm Görevler" },
-        { grp: "Ekip", items: [["sefler", "Şefler"], ["mekanlar", "Mekanlar"], ["personel", "Personel"]] },
+        { grp: "Ekip", items: [["sefler", "Şefler"], ["mekanlar", "Lokasyonlar"], ["personel", "Personel"]] },
         { k: "vardiya", l: vardiyaLabel },
         { k: "bildirim", l: bildirimLabel },
         { k: "izin", l: izinLabel },
@@ -900,7 +903,7 @@ function renderManager(u) {
         { k: "bugun", l: "Pano" },
         { k: "gorevler", l: "Görevler" },
         { k: "banaatanan", l: "Bana Atanan" },
-        { grp: "Ekip", items: [["mekanlar", "Mekanlarım"], ["personel", "Personelim"]] },
+        { grp: "Ekip", items: [["mekanlar", "Lokasyonlarım"], ["personel", "Personelim"]] },
         { k: "vardiya", l: vardiyaLabel },
         { k: "bildirim", l: bildirimLabel },
         { k: "izin", l: izinLabel },
@@ -2111,20 +2114,20 @@ function mgrVenues(u) {
   const venues = visibleVenues(u);
   const addForm = isOwner ? `
     <details class="cat" style="margin-bottom:18px">
-      <summary><span>➕ Yeni Mekan Ekle</span></summary>
+      <summary><span>➕ Yeni Lokasyon Ekle</span></summary>
       <div class="cat-body" style="padding:14px">
         <div class="row">
-          <div class="field"><label>Mekan adı</label><input id="v_name" placeholder="Örn: Merkez Şube" /></div>
+          <div class="field"><label>Lokasyon adı</label><input id="v_name" placeholder="Örn: Merkez Şube" /></div>
           <div class="field"><label>Adres (opsiyonel)</label><input id="v_addr" placeholder="Adres" /></div>
         </div>
-        <button class="btn-primary" id="v_add">Mekan Ekle</button>
+        <button class="btn-primary" id="v_add">Lokasyon Ekle</button>
         <div class="error-msg" id="v_err"></div>
       </div>
     </details>` : "";
 
   return addForm + `
-    <div class="section-title">${isOwner ? "Mekanlar" : "Mekanlarım"} (${venues.length})</div>
-    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Görevlerini görmek için bir mekana tıklayın.</p>
+    <div class="section-title">${isOwner ? "Lokasyonlar" : "Lokasyonlarım"} (${venues.length})</div>
+    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Görevleri görmek için bir lokasyona tıklayın.</p>
     ${venues.length ? venues.map((v) => {
       const cnt = visibleStaff(u).filter((s) => (s.venueIds || []).includes(v.id)).length;
       const taskCnt = visibleTasks(u).filter((t) => t.venueId === v.id).length;
@@ -2138,7 +2141,7 @@ function mgrVenues(u) {
           ${isOwner ? `<button class="btn-danger" data-del-venue="${v.id}">Sil</button>` : ""}
         </div>
       </div>`;
-    }).join("") : `<div class="empty">${isOwner ? "Henüz mekan yok." : "Size atanmış mekan yok."}</div>`}
+    }).join("") : `<div class="empty">${isOwner ? "Henüz lokasyon yok." : "Size atanmış lokasyon yok."}</div>`}
   `;
 }
 
@@ -2183,7 +2186,7 @@ function wireMgrVenues(u) {
     const name = document.getElementById("v_name").value.trim();
     const addr = document.getElementById("v_addr").value.trim();
     const err = document.getElementById("v_err");
-    if (!name) { err.textContent = "Mekan adı gerekli."; return; }
+    if (!name) { err.textContent = "Lokasyon adı gerekli."; return; }
     if (!orgPlan.unlimited && orgVenues(ownerIdOf(u)).length >= orgPlan.maxVenues) {
       err.textContent = `Demo planı: en fazla ${orgPlan.maxVenues} mekan ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
       return;

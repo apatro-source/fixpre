@@ -198,7 +198,7 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   box-shadow: 0 10px 30px rgba(31, 42, 68, .18); padding: 6px; min-width: 170px;
   display: flex; flex-direction: column; gap: 2px;
 }
-.tab-group:last-child .tab-menu { left: auto; right: 0; }   /* sağdaki menü içe açılsın */
+/* Açılır menü her zaman sağa doğru açılır (sola taşıp gizlenmesin) */
 .tab-sub {
   text-align: left; padding: 10px 13px; border: none; background: none;
   border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600;
