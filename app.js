@@ -732,20 +732,66 @@ function renderLogin() {
   const gl = guestLang();
   const langSel = LANGS.map(([k, l]) => `<option value="${k}" ${gl === k ? "selected" : ""}>${l}</option>`).join("");
 
+  const features = [
+    ["✅", "Görev Yönetimi", "Personele görev atayın, tekrarlayan görevler kurun, tamamlanmayı anlık takip edin."],
+    ["📅", "Haftalık Vardiya", "Vardiya planı oluşturun (A/B/C saatleri), vardiya ve izin değişikliği taleplerini yönetin."],
+    ["🏖️", "İzin ve Mesai Takibi", "İzin, fazla ve eksik mesai takibi; talepler onaya gider, bakiye otomatik hesaplanır."],
+    ["📨", "Talepler ve Duyurular", "Arıza, eksik ve istek bildirimleri; tüm lokasyonlara tek tıkla duyuru."],
+    ["👥", "Yönetici, Şef, Personel", "Roller ve lokasyon bazlı yetki; onay yetkisini siz belirleyin."],
+    ["🌍", "6 Dil ve Mobil", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca, İtalyanca. Telefona kurulabilir (PWA)."],
+  ];
+  const planCards = PACKAGES.map((p) => `
+    <div class="pkg-card pkg-${p.key}">
+      <div class="pkg-name">${p.name}</div>
+      <div class="pkg-price">${p.price === "$0" ? "$0" : p.price.replace("/ay", "<span class='pkg-per'>/ay</span>")}</div>
+      <ul class="pkg-feats">${p.unlimited
+        ? `<li>📍 Sınırsız</li><li>👨‍🍳 Sınırsız</li><li>👥 Sınırsız</li>`
+        : `<li>📍 ${p.venues} Lokasyon</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`}</ul>
+    </div>`).join("");
+
   app.innerHTML = `
-    <div class="login-wrap">
-      <div class="login-card">
-        <div class="login-lang"><select id="login_lang">${langSel}</select></div>
-        <h1><img class="brand-logo lg" src="icon-192.png" alt="" /> Fixpre</h1>
-        <div class="sub">Personel görev yönetimi</div>
-        <div class="domain">fixpre.com</div>
-        <div class="auth-tabs">
-          <button class="auth-tab ${isLogin ? "active" : ""}" data-auth="login">Giriş Yap</button>
-          <button class="auth-tab ${!isLogin ? "active" : ""}" data-auth="register">Kayıt Ol</button>
+    <div class="landing">
+      <header class="lp-nav">
+        <div class="brand"><img class="brand-logo" src="icon-192.png" alt="" /> Fixpre</div>
+        <div class="lp-nav-right">
+          <select id="login_lang" class="lp-lang">${langSel}</select>
+          <a href="#giris" class="btn-primary btn-sm lp-login-link">Giriş Yap</a>
         </div>
-        ${formHtml}
-        <div class="error-msg" id="loginErr"></div>
+      </header>
+
+      <section class="lp-hero">
+        <h1>İşletmeniz için personel görev, vardiya ve izin yönetimi</h1>
+        <p class="lp-lead">Fixpre; kafe, restoran, market ve tüm işletmeler için görev atama, haftalık vardiya planı ve izin/mesai takibini tek uygulamada toplar. Telefondan kullanın, ücretsiz başlayın.</p>
+        <a href="#giris" class="btn-primary lp-cta">Ücretsiz Başla</a>
+        <div class="domain">fixpre.com</div>
+      </section>
+
+      <section class="lp-features">
+        ${features.map(([ic, t, d]) => `
+          <div class="lp-card"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
+      </section>
+
+      <section class="lp-plans">
+        <h2>Paketler</h2>
+        <p class="lp-lead">Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.</p>
+        <div class="pkg-grid">${planCards}</div>
+      </section>
+
+      <div class="login-wrap" id="giris">
+        <div class="login-card">
+          <h1><img class="brand-logo lg" src="icon-192.png" alt="" /> Fixpre</h1>
+          <div class="sub">Personel görev yönetimi</div>
+          <div class="domain">fixpre.com</div>
+          <div class="auth-tabs">
+            <button class="auth-tab ${isLogin ? "active" : ""}" data-auth="login">Giriş Yap</button>
+            <button class="auth-tab ${!isLogin ? "active" : ""}" data-auth="register">Kayıt Ol</button>
+          </div>
+          ${formHtml}
+          <div class="error-msg" id="loginErr"></div>
+        </div>
       </div>
+
+      <footer class="lp-foot">© Fixpre · fixpre.com — personel görev, vardiya ve izin yönetim uygulaması</footer>
     </div>
   `;
 

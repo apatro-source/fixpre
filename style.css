@@ -126,6 +126,60 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .auth-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 6px rgba(99,102,241,.18); }
 .auth-note { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
 .login-card .row { gap: 10px; }
+
+/* ---- Tanıtım (landing) sayfası ---- */
+.landing { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+.lp-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; position: sticky; top: 0; z-index: 20;
+  background: rgba(255,255,255,.8); backdrop-filter: blur(8px);
+}
+.lp-nav .brand {
+  font-weight: 800; font-size: 20px;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.lp-nav-right { display: flex; align-items: center; gap: 10px; }
+.lp-lang { width: auto; padding: 7px 10px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); }
+.lp-login-link { text-decoration: none; display: inline-block; }
+
+.lp-hero { text-align: center; padding: 40px 10px 30px; }
+.lp-hero h1 {
+  font-size: 34px; line-height: 1.2; margin-bottom: 14px; max-width: 760px; margin-inline: auto;
+  background: linear-gradient(135deg, #4f46e5, #ec4899);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.lp-lead { color: var(--muted); font-size: 16px; max-width: 620px; margin: 0 auto 20px; }
+.lp-cta { display: inline-block; text-decoration: none; padding: 14px 34px; font-size: 16px; border-radius: 999px; }
+.lp-hero .domain {
+  margin-top: 14px; font-weight: 700; font-size: 14px;
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0 40px; }
+.lp-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 22px 18px; box-shadow: var(--shadow);
+}
+.lp-card .lp-ic { font-size: 30px; margin-bottom: 8px; }
+.lp-card h3 { font-size: 17px; margin-bottom: 6px; }
+.lp-card p { color: var(--muted); font-size: 14px; }
+
+.lp-plans { margin: 10px 0 40px; }
+.lp-plans h2 { font-size: 24px; text-align: center; margin-bottom: 6px; }
+.lp-plans .lp-lead { margin-bottom: 18px; }
+
+.landing .login-wrap { min-height: auto; padding: 20px 0 50px; }
+.lp-foot { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0 40px; border-top: 1px solid var(--border); }
+
+@media (max-width: 760px) {
+  .lp-features { grid-template-columns: 1fr 1fr; }
+  .lp-hero h1 { font-size: 26px; }
+}
+@media (max-width: 460px) {
+  .lp-features { grid-template-columns: 1fr; }
+}
 .hint {
   margin-top: 20px; padding: 13px; background: #f4f1ff;
   border: 1px dashed #c7befb; border-radius: 12px; font-size: 12px; color: #5b5276;
