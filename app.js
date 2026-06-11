@@ -59,6 +59,8 @@ function migrate(db) {
   if (!db.undoLog) db.undoLog = [];   // geri alma kayıtları
   if (!db.leaves) db.leaves = [];     // izin / mesai talepleri
   if (!db.announcements) db.announcements = []; // duyurular
+  if (!db.shifts) db.shifts = [];     // onaylı izin/off günleri: { id, ownerId, userId, date, reason, by }
+  if (!db.shiftReqs) db.shiftReqs = []; // vardiya/izin değişiklik talepleri
   (db.tasks || []).forEach((t) => {
     if (!t.recurrence) t.recurrence = { type: "once" };
     if (!t.reads) t.reads = {};   // okundu bilgisi: { occKey: { userId: iso } }
@@ -115,7 +117,7 @@ const TOKEN_KEY = "fixpre_token";
 const UID_KEY = "fixpre_uid";
 
 function authToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
-function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [] }; }
+function emptyDB() { return { users: [], venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [], shifts: [], shiftReqs: [] }; }
 
 function currentUser() {
   const id = localStorage.getItem(UID_KEY);
@@ -382,6 +384,26 @@ function fmtDay(dk) {
   return label;
 }
 
+/* ---- Vardiya / izin günü yardımcıları ---- */
+// Haftanın pazartesisi (offset hafta kadar kaydır)
+function weekMonday(offset) {
+  const d = new Date();
+  const wd = (d.getDay() + 6) % 7;            // Pzt=0 ... Paz=6
+  return addDays(d, -wd + (offset || 0) * 7);
+}
+// Verilen pazartesiden 7 günün tarih anahtarları
+function weekDateKeys(monday) {
+  return Array.from({ length: 7 }, (_, i) => ymd(addDays(monday, i)));
+}
+// Kişi o gün izinli/off mi (onaylı)
+function isOff(userId, dateKey) {
+  return (DB.shifts || []).some((s) => s.userId === userId && s.date === dateKey);
+}
+// Org'daki tüm çalışanlar (şefler + personel) — herkes birbirini görür
+function orgWorkers(owner) {
+  return [...orgChefs(owner), ...orgStaff(owner)];
+}
+
 // Görev belirli bir günde aktif mi? (once hariç — recurring için)
 function occursOn(t, d) {
   const r = t.recurrence || { type: "once" };
@@ -452,6 +474,7 @@ let editingTask = null;           // düzenlenen görev id'si
 let sharingTask = null;           // şefin paylaşmak istediği görev id'si
 let showProfile = false;          // profil (dil/şifre) penceresi açık mı
 let showAnnounce = false;         // duyuru yap penceresi açık mı
+let shiftWeekOffset = 0;          // vardiya ekranında hangi hafta (0 = bu hafta)
 
 /* ---------------- Render ---------------- */
 
@@ -766,6 +789,10 @@ function renderManager(u) {
     ? orgLeaves(ownerIdOf(u)).filter((l) => l.status === "beklemede").length
     : myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length;
   const izinLabel = "İzin / Mesai" + (leaveCount ? ` (${leaveCount})` : "");
+  const vardiyaCount = isOwner
+    ? (DB.shiftReqs || []).filter((r) => r.ownerId === ownerIdOf(u) && r.status === "beklemede").length
+    : (DB.shiftReqs || []).filter((r) => r.requesterId === u.id && r.status !== "beklemede" && !r.seenByReporter).length;
+  const vardiyaLabel = "Vardiya" + (vardiyaCount ? ` (${vardiyaCount})` : "");
   const tabs = isOwner
     ? [
         ["bugun", "Pano"],
@@ -774,6 +801,7 @@ function renderManager(u) {
         ["mekanlar", "Mekanlar"],
         ["personel", "Personel"],
         ["performans", "Performans"],
+        ["vardiya", "Vardiya"],
         ["bildirim", bildirimLabel],
         ["izin", izinLabel],
         ["kayitlar", "Kayıtlar"],
@@ -785,6 +813,7 @@ function renderManager(u) {
         ["banaatanan", "Bana Atanan"],
         ["mekanlar", "Mekanlarım"],
         ["personel", "Personelim"],
+        ["vardiya", "Vardiya"],
         ["bildirim", bildirimLabel],
         ["izin", izinLabel],
         ["kayitlar", "Kayıtlar"],
@@ -796,6 +825,7 @@ function renderManager(u) {
         { k: "bugun", l: "Pano" },
         { k: "gorevler", l: "Tüm Görevler" },
         { grp: "Ekip", items: [["sefler", "Şefler"], ["mekanlar", "Mekanlar"], ["personel", "Personel"]] },
+        { k: "vardiya", l: vardiyaLabel },
         { k: "bildirim", l: bildirimLabel },
         { k: "izin", l: izinLabel },
         { grp: "Daha Fazla", items: [["performans", "Performans"], ["kayitlar", "Kayıtlar"], ["paketler", "Paketler"]] },
@@ -805,6 +835,7 @@ function renderManager(u) {
         { k: "gorevler", l: "Görevler" },
         { k: "banaatanan", l: "Bana Atanan" },
         { grp: "Ekip", items: [["mekanlar", "Mekanlarım"], ["personel", "Personelim"]] },
+        { k: "vardiya", l: vardiyaLabel },
         { k: "bildirim", l: bildirimLabel },
         { k: "izin", l: izinLabel },
         { k: "kayitlar", l: "Kayıtlar" },
@@ -824,6 +855,7 @@ function renderManager(u) {
   else if (activeTab === "izin") body = leavesView(u);
   else if (activeTab === "performans") body = perfView(u);
   else if (activeTab === "paketler") body = packagesView(u);
+  else if (activeTab === "vardiya") body = shiftView(u);
   else body = mgrDashboard(u);
 
   app.innerHTML = topbar(u) + `
@@ -868,6 +900,7 @@ function renderManager(u) {
   else if (activeTab === "bildirim") wireReports(u);
   else if (activeTab === "izin") wireLeaves(u);
   else if (activeTab === "performans") wireRange("perf", (v) => perfFrom = v, (v) => perfTo = v);
+  else if (activeTab === "vardiya") wireShift(u);
   else wireDashboard(u);
 
   if (editingTask) wireTaskEdit(u);
@@ -1154,6 +1187,200 @@ function packagesView(u) {
       Paket yükseltmek için <strong>${SUPER_EMAIL}</strong> ile iletişime geçin.
     </div>
   `;
+}
+
+/* ============================================================
+   HAFTALIK VARDİYA + İZİN/VARDİYA DEĞİŞİKLİK TALEBİ
+   ============================================================ */
+function fmtDayShort(dk) {
+  const d = new Date(dk + "T00:00:00");
+  return d.toLocaleDateString(currentLocale(), { day: "2-digit", month: "short" });
+}
+
+// Talep sahibi karar görünce bildirimi temizle
+function markShiftSeen(u) {
+  let ch = false;
+  (DB.shiftReqs || []).forEach((r) => {
+    if (r.requesterId === u.id && r.status !== "beklemede" && !r.seenByReporter) { r.seenByReporter = true; ch = true; }
+  });
+  if (ch) saveDB(DB);
+}
+
+function shiftReqCard(r, canDecide) {
+  const who = userById(r.requesterId);
+  const withU = r.withUserId ? userById(r.withUserId) : null;
+  const pending = r.status === "beklemede";
+  const approved = r.status === "onaylandi";
+  const typeLabel = r.type === "takas" ? "🔄 Vardiya değişikliği" : "🏖️ İzin günü";
+  const detail = r.type === "takas"
+    ? `${fmtDay(r.date)}${withU ? " · " + esc(withU.name) + " ile" : ""}${r.withDate ? " · siz: " + fmtDay(r.withDate) : ""}`
+    : fmtDay(r.date);
+  const st = pending ? `<span class="badge badge-open">Beklemede</span>`
+    : approved ? `<span class="badge badge-done">Onaylandı</span>`
+    : `<span class="badge badge-rej">Reddedildi</span>`;
+  return `
+    <div class="report ${approved ? "resolved" : ""} ${(!pending && !approved) ? "rejected" : ""}">
+      <div class="report-head"><span class="rcat">${typeLabel}</span>${st}</div>
+      <div class="report-text"><strong>${detail}</strong>${r.note ? ` — ${esc(r.note)}` : ""}</div>
+      <div class="report-meta">${roleIcon(who)} ${esc(who ? who.name : "?")} · ${fmtDate(r.createdAt)}</div>
+      ${(!pending) ? `<div class="report-reply">${approved ? "✅ Onaylandı" : "❌ Reddedildi"}${r.decisionNote ? ": " + esc(r.decisionNote) : ""}</div>` : ""}
+      ${(pending && canDecide) ? `
+        <div class="report-actions">
+          <input class="srdec-note" data-srnote="${r.id}" placeholder="Not (opsiyonel)" />
+          <button class="btn-green btn-sm" data-sr-ok="${r.id}">Onayla</button>
+          <button class="btn-danger btn-sm" data-sr-no="${r.id}">Reddet</button>
+        </div>` : ""}
+    </div>`;
+}
+
+function shiftView(u) {
+  const owner = ownerIdOf(u);
+  const isMgr = u.role === "yonetici";
+  if (!isMgr) markShiftSeen(u);
+  const people = orgWorkers(owner);
+  const monday = weekMonday(shiftWeekOffset);
+  const dates = weekDateKeys(monday);
+  const todK = todayKey();
+
+  const head = `<div class="sh-row sh-head">
+    <div class="sh-name"></div>
+    ${dates.map((dk) => {
+      const d = new Date(dk + "T00:00:00");
+      return `<div class="sh-cell sh-dayhdr${dk === todK ? " today" : ""}">${WD_SHORT[d.getDay()]}<span>${d.getDate()}</span></div>`;
+    }).join("")}
+  </div>`;
+
+  const rows = people.length ? people.map((p) => `
+    <div class="sh-row">
+      <div class="sh-name">${roleIcon(p)} ${esc(p.name)}</div>
+      ${dates.map((dk) => {
+        const off = isOff(p.id, dk);
+        const ic = off ? "🏖️" : "✅";
+        return isMgr
+          ? `<button class="sh-cell ${off ? "off" : "on"}" data-shift="${p.id}|${dk}" title="${off ? "İzinli — çalışana çevir" : "Çalışıyor — izinli yap"}">${ic}</button>`
+          : `<div class="sh-cell ${off ? "off" : "on"}">${ic}</div>`;
+      }).join("")}
+    </div>`).join("") : `<div class="empty">Kişi yok.</div>`;
+
+  let mgrReqs = "";
+  if (isMgr) {
+    const pend = (DB.shiftReqs || []).filter((r) => r.ownerId === owner && r.status === "beklemede")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    mgrReqs = `
+      <div class="section-title" style="margin-top:20px">Bekleyen Değişiklik Talepleri (${pend.length})</div>
+      ${pend.length ? pend.map((r) => shiftReqCard(r, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}`;
+  }
+
+  let reqBlock = "";
+  if (!isMgr) {
+    const opts = people.filter((p) => p.id !== u.id).map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    const mine = (DB.shiftReqs || []).filter((r) => r.requesterId === u.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    reqBlock = `
+      <details class="cat" style="margin:18px 0">
+        <summary><span>📝 Değişiklik / İzin Talebi</span></summary>
+        <div class="cat-body" style="padding:14px">
+          <div class="row">
+            <div class="field"><label>Tür</label><select id="sr_type">
+              <option value="izin">İzin günü istiyorum</option>
+              <option value="takas">Vardiya değişikliği (takas)</option>
+            </select></div>
+            <div class="field"><label>Tarih</label><input id="sr_date" type="date" value="${todK}" /></div>
+          </div>
+          <div class="row" id="sr_swap_f" style="display:none">
+            <div class="field"><label>Kiminle</label><select id="sr_with">${opts}</select></div>
+            <div class="field"><label>Onun yerine geleceğiniz gün</label><input id="sr_withdate" type="date" /></div>
+          </div>
+          <div class="field"><label>Açıklama</label><textarea id="sr_note" placeholder="Ör: Doktor randevum var, o gün izinli olmak istiyorum"></textarea></div>
+          <button class="btn-primary" id="sr_send">Talebi Yöneticiye Gönder</button>
+          <div class="error-msg" id="sr_err"></div>
+        </div>
+      </details>
+      <div class="section-title">Taleplerim (${mine.length})</div>
+      ${mine.length ? mine.map((r) => shiftReqCard(r, false)).join("") : `<div class="empty">Henüz talebiniz yok.</div>`}`;
+  }
+
+  return `
+    <div class="section-title">📅 Haftalık Vardiya</div>
+    <div class="shift-nav">
+      <button class="btn-ghost btn-sm" id="sh_prev">← Önceki</button>
+      <span class="shift-range">${fmtDayShort(dates[0])} – ${fmtDayShort(dates[6])}${shiftWeekOffset === 0 ? " · Bu hafta" : ""}</span>
+      <button class="btn-ghost btn-sm" id="sh_next">Sonraki →</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 12px">✅ Çalışıyor · 🏖️ İzinli${isMgr ? " · Hücreye tıklayıp değiştirin" : ""}</p>
+    <div class="shift-grid">${head}${rows}</div>
+    ${mgrReqs}
+    ${reqBlock}
+  `;
+}
+
+function decideShiftReq(id, status, u) {
+  const r = (DB.shiftReqs || []).find((x) => x.id === id);
+  if (!r) return;
+  const noteEl = document.querySelector(`.srdec-note[data-srnote="${id}"]`);
+  r.status = status;
+  r.decisionNote = noteEl ? noteEl.value.trim() : "";
+  r.decidedBy = u.id; r.decidedAt = new Date().toISOString(); r.seenByReporter = false;
+  if (status === "onaylandi") {
+    const addOff = (userId, dk) => {
+      if (dk && !DB.shifts.some((s) => s.userId === userId && s.date === dk))
+        DB.shifts.push({ id: uid(), ownerId: r.ownerId, userId, date: dk, reason: "Talep onayı", by: u.id });
+    };
+    addOff(r.requesterId, r.date);
+    if (r.type === "takas" && r.withUserId && r.withDate) addOff(r.withUserId, r.withDate);
+  }
+  saveDB(DB);
+  notifyUsers([r.requesterId], "Vardiya/izin talebiniz", status === "onaylandi" ? "Onaylandı ✅" : "Reddedildi ❌", "/");
+  render();
+}
+
+function wireShift(u) {
+  const owner = ownerIdOf(u);
+  const prev = document.getElementById("sh_prev");
+  if (prev) prev.onclick = () => { shiftWeekOffset--; render(); };
+  const next = document.getElementById("sh_next");
+  if (next) next.onclick = () => { shiftWeekOffset++; render(); };
+
+  // Yönetici: hücreye tıkla → izinli/çalışıyor değiştir
+  document.querySelectorAll("[data-shift]").forEach((b) => {
+    b.onclick = () => {
+      const [pid, dk] = b.dataset.shift.split("|");
+      const idx = (DB.shifts || []).findIndex((s) => s.userId === pid && s.date === dk);
+      if (idx >= 0) DB.shifts.splice(idx, 1);
+      else DB.shifts.push({ id: uid(), ownerId: owner, userId: pid, date: dk, reason: "Yönetici", by: u.id });
+      saveDB(DB); render();
+    };
+  });
+
+  // Personel/şef: tür değişince takas alanlarını göster/gizle
+  const typeSel = document.getElementById("sr_type");
+  if (typeSel) {
+    const sync = () => { const f = document.getElementById("sr_swap_f"); if (f) f.style.display = typeSel.value === "takas" ? "" : "none"; };
+    typeSel.onchange = sync; sync();
+  }
+  const send = document.getElementById("sr_send");
+  if (send) send.onclick = () => {
+    const type = document.getElementById("sr_type").value;
+    const date = document.getElementById("sr_date").value;
+    const note = document.getElementById("sr_note").value.trim();
+    const err = document.getElementById("sr_err");
+    if (!date) { err.textContent = "Tarih seçin."; return; }
+    const req = {
+      id: uid(), ownerId: owner, requesterId: u.id, type, date,
+      withUserId: null, withDate: null, note, status: "beklemede",
+      createdAt: new Date().toISOString(), decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
+    };
+    if (type === "takas") {
+      req.withUserId = document.getElementById("sr_with").value || null;
+      req.withDate = document.getElementById("sr_withdate").value || null;
+    }
+    DB.shiftReqs.push(req);
+    saveDB(DB);
+    notifyUsers([owner], "Vardiya/izin değişiklik talebi", u.name, "/");
+    render();
+  };
+
+  document.querySelectorAll("[data-sr-ok]").forEach((b) => { b.onclick = () => decideShiftReq(b.dataset.srOk, "onaylandi", u); });
+  document.querySelectorAll("[data-sr-no]").forEach((b) => { b.onclick = () => decideShiftReq(b.dataset.srNo, "reddedildi", u); });
 }
 
 function perfView(u) {
@@ -1968,6 +2195,9 @@ function wireMgrChefs(u) {
    ŞEF — Bana Atanan Görevler (tamamla + personelle paylaş)
    ============================================================ */
 function assignedToMe(u) {
+  if (isOff(u.id, todayKey())) {
+    return `<div class="card" style="text-align:center">🏖️ Bugün izinlisiniz — bugün için göreviniz yok.</div>`;
+  }
   const myTasks = DB.tasks
     .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t) && taskVenueOk(t, u))
     .sort((a, b) => {
@@ -2501,9 +2731,11 @@ function wireAnnouncements(u) {
 function renderStaff(u) {
   const repNotif = myReports(u).filter((r) => r.status === "cozuldu" && !r.seenByReporter).length;
   const leaveNotif = myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length;
+  const shiftNotif = (DB.shiftReqs || []).filter((r) => r.requesterId === u.id && r.status !== "beklemede" && !r.seenByReporter).length;
   const tabs = [
     ["bugun", "Görevlerim"],
     ["gecmis", "Biten Görevler"],
+    ["vardiya", "Vardiya" + (shiftNotif ? ` (${shiftNotif})` : "")],
     ["bildirim", "Talepler" + (repNotif ? ` (${repNotif})` : "")],
     ["izin", "İzin / Mesai" + (leaveNotif ? ` (${leaveNotif})` : "")],
   ];
@@ -2511,6 +2743,7 @@ function renderStaff(u) {
   if (staffTab === "gecmis") body = staffHistory(u);
   else if (staffTab === "bildirim") body = reportsView(u);
   else if (staffTab === "izin") body = leavesView(u);
+  else if (staffTab === "vardiya") body = shiftView(u);
   else body = staffToday(u);
 
   app.innerHTML = topbar(u) + `
@@ -2531,11 +2764,21 @@ function renderStaff(u) {
   }
   if (staffTab === "bildirim") { wireReports(u); return; }
   if (staffTab === "izin") { wireLeaves(u); return; }
+  if (staffTab === "vardiya") { wireShift(u); return; }
   wireStaffToday(u);
 }
 
 /* --- Personel: bugünkü görevler --- */
 function staffToday(u) {
+  // Bugün izinliyse o günün görevleri gösterilmez
+  if (isOff(u.id, todayKey())) {
+    return `
+      ${resolvedBanner(u)}
+      ${leaveBanner(u)}
+      ${announcementsBoard(u)}
+      <div class="card" style="text-align:center">🏖️ Bugün izinlisiniz — bugün için göreviniz yok. İyi dinlenmeler!</div>
+    `;
+  }
   const myTasks = DB.tasks
     .filter((t) => t.assignedUserIds.includes(u.id) && occursToday(t) && taskVenueOk(t, u))
     .sort((a, b) => {

@@ -517,6 +517,33 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 @media (max-width: 760px) { .pkg-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 420px) { .pkg-grid { grid-template-columns: 1fr; } }
 
+/* ---- Haftalık vardiya ızgarası ---- */
+.shift-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.shift-range { font-weight: 700; font-size: 14px; color: var(--text); }
+.shift-grid {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow); overflow-x: auto; padding: 4px;
+}
+.sh-row { display: flex; align-items: stretch; }
+.sh-row + .sh-row { border-top: 1px solid var(--border); }
+.sh-name {
+  flex: 0 0 120px; min-width: 120px; padding: 10px 12px; font-size: 13.5px; font-weight: 600;
+  display: flex; align-items: center; position: sticky; left: 0; background: var(--panel); z-index: 1;
+}
+.sh-cell {
+  flex: 1 1 0; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 4px; font-size: 17px; border: none; background: none; border-left: 1px solid var(--border);
+}
+.sh-head { background: #f8fafc; border-bottom: 2px solid var(--border); font-weight: 700; border-radius: 10px 10px 0 0; }
+.sh-dayhdr { font-size: 12px; color: var(--muted); gap: 1px; }
+.sh-dayhdr span { font-size: 15px; color: var(--text); font-weight: 800; }
+.sh-dayhdr.today { color: var(--primary); }
+.sh-dayhdr.today span { color: var(--primary); }
+button.sh-cell { cursor: pointer; }
+button.sh-cell:hover { background: #eef1f8; }
+.sh-cell.off { background: #fff7ed; }
+.sh-cell.on { background: #f0fdf4; }
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;
