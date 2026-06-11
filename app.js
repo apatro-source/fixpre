@@ -523,6 +523,7 @@ const app = document.getElementById("app");
 function render() {
   const u = currentUser();
   if (!u) { renderLogin(); translateUI(); return; }
+  window.onscroll = null;   // landing scroll efektini temizle
   if (u.role === "yonetici" || u.role === "sef") renderManager(u);
   else renderStaff(u);
   if (showProfile) mountProfile(u);
@@ -826,6 +827,14 @@ function renderLogin() {
     localStorage.setItem("fixpre_lang", e.target.value);
     render();
   };
+
+  // Üst bar: aşağı kayınca hafif cam efekti
+  const lpNav = app.querySelector(".lp-nav");
+  if (lpNav) {
+    const onScroll = () => lpNav.classList.toggle("scrolled", window.scrollY > 10);
+    window.onscroll = onScroll;
+    onScroll();
+  }
 
   document.querySelectorAll(".auth-tab").forEach((t) => {
     t.onclick = () => { authMode = t.dataset.auth; render(); };

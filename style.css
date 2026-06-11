@@ -131,17 +131,28 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .landing { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
 .lp-nav {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 0; position: sticky; top: 0; z-index: 20;
-  background: rgba(255,255,255,.8); backdrop-filter: blur(8px);
+  padding: 16px 4px; position: sticky; top: 0; z-index: 20;
+  background: transparent;            /* renkli zemine otursun, beyaz şerit yok */
+}
+.lp-nav.scrolled {                    /* aşağı kayınca hafif cam efekti */
+  background: rgba(255,255,255,.55); backdrop-filter: blur(12px) saturate(140%);
+  border-radius: 0 0 16px 16px; box-shadow: 0 6px 20px rgba(99,102,241,.10);
 }
 .lp-nav .brand {
-  font-weight: 800; font-size: 20px;
+  display: flex; align-items: center; font-weight: 800; font-size: 21px;
   background: linear-gradient(135deg, #6366f1, #ec4899);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .lp-nav-right { display: flex; align-items: center; gap: 10px; }
-.lp-lang { width: auto; padding: 7px 10px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); }
-.lp-login-link { text-decoration: none; display: inline-block; }
+.lp-lang {
+  width: auto; padding: 8px 12px; font-size: 13px; font-weight: 600; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.65);
+  backdrop-filter: blur(6px); color: var(--text); cursor: pointer;
+}
+.lp-login-link {
+  text-decoration: none; display: inline-block; border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(99,102,241,.35);
+}
 
 .lp-hero { text-align: center; padding: 40px 10px 30px; }
 .lp-hero h1 {
