@@ -1212,9 +1212,10 @@ function shiftReqCard(r, canDecide) {
   const pending = r.status === "beklemede";
   const approved = r.status === "onaylandi";
   const typeLabel = r.type === "takas" ? "🔄 Vardiya değişikliği" : "🏖️ İzin günü";
-  const detail = r.type === "takas"
+  const baseDetail = r.type === "takas"
     ? `${fmtDay(r.date)}${withU ? " · " + esc(withU.name) + " ile" : ""}${r.withDate ? " · siz: " + fmtDay(r.withDate) : ""}`
     : fmtDay(r.date);
+  const detail = baseDetail + (r.freeDate ? ` · eski izin: ${fmtDay(r.freeDate)} → çalışıyor` : "");
   const st = pending ? `<span class="badge badge-open">Beklemede</span>`
     : approved ? `<span class="badge badge-done">Onaylandı</span>`
     : `<span class="badge badge-rej">Reddedildi</span>`;
@@ -1284,8 +1285,9 @@ function shiftView(u) {
               <option value="izin">İzin günü istiyorum</option>
               <option value="takas">Vardiya değişikliği (takas)</option>
             </select></div>
-            <div class="field"><label>Tarih</label><input id="sr_date" type="date" value="${todK}" /></div>
+            <div class="field"><label>İstediğiniz izin günü</label><input id="sr_date" type="date" value="${todK}" /></div>
           </div>
+          <div class="field"><label>Eski izin gününüz — çalışmaya dönecek (opsiyonel)</label><input id="sr_free" type="date" /></div>
           <div class="row" id="sr_swap_f" style="display:none">
             <div class="field"><label>Kiminle</label><select id="sr_with">${opts}</select></div>
             <div class="field"><label>Onun yerine geleceğiniz gün</label><input id="sr_withdate" type="date" /></div>
@@ -1325,7 +1327,13 @@ function decideShiftReq(id, status, u) {
       if (dk && !DB.shifts.some((s) => s.userId === userId && s.date === dk))
         DB.shifts.push({ id: uid(), ownerId: r.ownerId, userId, date: dk, reason: "Talep onayı", by: u.id });
     };
+    const removeOff = (userId, dk) => {
+      if (!dk) return;
+      const i = DB.shifts.findIndex((s) => s.userId === userId && s.date === dk);
+      if (i >= 0) DB.shifts.splice(i, 1);
+    };
     addOff(r.requesterId, r.date);
+    if (r.freeDate) removeOff(r.requesterId, r.freeDate);   // eski izin günü → çalışıyor
     if (r.type === "takas" && r.withUserId && r.withDate) addOff(r.withUserId, r.withDate);
   }
   saveDB(DB);
@@ -1364,8 +1372,9 @@ function wireShift(u) {
     const note = document.getElementById("sr_note").value.trim();
     const err = document.getElementById("sr_err");
     if (!date) { err.textContent = "Tarih seçin."; return; }
+    const freeDate = document.getElementById("sr_free").value || null;
     const req = {
-      id: uid(), ownerId: owner, requesterId: u.id, type, date,
+      id: uid(), ownerId: owner, requesterId: u.id, type, date, freeDate,
       withUserId: null, withDate: null, note, status: "beklemede",
       createdAt: new Date().toISOString(), decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
     };
