@@ -140,6 +140,25 @@ async function authCall(payload) {
   return j;
 }
 
+// Paket ilgi talebi gönder (auth gerekmez)
+async function leadSubmit(payload) {
+  const r = await fetch("/api/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("http_" + r.status));
+  return j;
+}
+// İlgi taleplerini getir (yalnızca süper admin)
+async function leadsGet() {
+  const r = await fetch("/api/lead", { headers: { "Authorization": "Bearer " + authToken() } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("http_" + r.status));
+  return j;
+}
+
 async function doLogin(email, password) {
   const j = await authCall({ action: "login", email: (email || "").trim(), password });
   localStorage.setItem(TOKEN_KEY, j.token);
@@ -758,15 +777,6 @@ function renderLogin() {
     ["👤", "Personel", "Görevlerini ve haftalık vardiyasını görür; izin, mesai ve vardiya değişikliği talebi gönderir."],
   ];
   const sectors = ["Restoran", "Kafe", "Market", "Otel", "Mağaza", "Kuaför & Berber", "Fırın & Pastane", "Bar & Cafe", "Eczane", "Spor Salonu", "Şube Zinciri", "Üretim & Atölye"];
-  const planCards = PACKAGES.map((p) => `
-    <div class="pkg-card pkg-${p.key}">
-      <div class="pkg-name">${p.name}</div>
-      <div class="pkg-price">${p.price === "$0" ? "$0" : p.price.replace("/ay", "<span class='pkg-per'>/ay</span>")}</div>
-      <ul class="pkg-feats">${p.unlimited
-        ? `<li>📍 Sınırsız</li><li>👨‍🍳 Sınırsız</li><li>👥 Sınırsız</li>`
-        : `<li>📍 ${p.venues} Lokasyon</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`}</ul>
-    </div>`).join("");
-
   app.innerHTML = `
     <div class="landing">
       <header class="lp-nav">
@@ -806,9 +816,12 @@ function renderLogin() {
       </section>
 
       <section class="lp-plans">
-        <h2>Paketler</h2>
-        <p class="lp-lead">Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.</p>
-        <div class="pkg-grid">${planCards}</div>
+        <div class="lp-soon">
+          <div style="font-size:38px">🚀</div>
+          <h2>Paketlerimiz çok yakında!</h2>
+          <p class="lp-lead">Şimdilik tüm özellikler <strong>demo sürümde ücretsiz</strong>. Ücretli paketler yakında — o zamana kadar Fixpre'yi keşfedin.</p>
+          <a href="#giris" class="btn-primary lp-cta">Demoyu Ücretsiz Dene</a>
+        </div>
       </section>
 
       <div class="login-wrap" id="giris">
@@ -968,6 +981,7 @@ function renderManager(u) {
         ["izin", izinLabel],
         ["kayitlar", "Kayıtlar"],
         ["paketler", "Paketler"],
+        ["leads", "İlgi Talepleri"],
       ]
     : [
         ["bugun", "Pano"],
@@ -990,7 +1004,7 @@ function renderManager(u) {
         { k: "vardiya", l: vardiyaLabel },
         { k: "bildirim", l: bildirimLabel },
         { k: "izin", l: izinLabel },
-        { grp: "Daha Fazla", items: [["performans", "Performans"], ["kayitlar", "Kayıtlar"], ["paketler", "Paketler"]] },
+        { grp: "Daha Fazla", items: [["performans", "Performans"], ["kayitlar", "Kayıtlar"], ["paketler", "Paketler"], ...(u.email === SUPER_EMAIL ? [["leads", "İlgi Talepleri"]] : [])] },
       ]
     : [
         { k: "bugun", l: "Pano" },
@@ -1017,6 +1031,7 @@ function renderManager(u) {
   else if (activeTab === "izin") body = leavesView(u);
   else if (activeTab === "performans") body = perfView(u);
   else if (activeTab === "paketler") body = packagesView(u);
+  else if (activeTab === "leads") body = leadsView(u);
   else if (activeTab === "vardiya") body = shiftView(u);
   else body = mgrDashboard(u);
 
@@ -1063,6 +1078,8 @@ function renderManager(u) {
   else if (activeTab === "izin") wireLeaves(u);
   else if (activeTab === "performans") wireRange("perf", (v) => perfFrom = v, (v) => perfTo = v);
   else if (activeTab === "vardiya") wireShift(u);
+  else if (activeTab === "paketler") wirePackages(u);
+  else if (activeTab === "leads") wireLeadsView(u);
   else wireDashboard(u);
 
   if (editingTask) wireTaskEdit(u);
@@ -1338,30 +1355,84 @@ function currentPackageKey() {
 }
 
 function packagesView(u) {
-  const curKey = currentPackageKey();
-  const cards = PACKAGES.map((p) => {
-    const cur = p.key === curKey;
-    const feats = p.unlimited
-      ? `<li>📍 Sınırsız</li><li>👨‍🍳 Sınırsız</li><li>👥 Sınırsız</li>`
-      : `<li>📍 ${p.venues} Lokasyon</li><li>👨‍🍳 ${p.chefs} Şef</li><li>👥 ${p.staff} Personel</li>`;
-    const price = p.price === "$0" ? "$0" : p.price.replace("/ay", "<span class='pkg-per'>/ay</span>");
-    return `
-      <div class="pkg-card pkg-${p.key} ${cur ? "current" : ""}">
-        ${cur ? `<div class="pkg-cur-badge">Mevcut Paketiniz</div>` : ""}
-        <div class="pkg-name">${p.name}</div>
-        <div class="pkg-price">${price}</div>
-        <ul class="pkg-feats">${feats}</ul>
-      </div>`;
-  }).join("");
+  const owner = ownerIdOf(u);
+  const staff = orgStaff(owner).length;
+  const chefs = orgChefs(owner).length;
+  const venues = orgVenues(owner).length;
   return `
     <div class="section-title">💎 Paketler</div>
-    ${planStatusBanner()}
-    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Tüm özellikler her pakette vardır; fark kapasitededir. Yıllık ödemede 2 ay bedava.</p>
-    <div class="pkg-grid">${cards}</div>
-    <div class="card" style="margin-top:14px;text-align:center">
-      Paket yükseltmek için <strong>${SUPER_EMAIL}</strong> ile iletişime geçin.
+    <div class="card lp-soon" style="text-align:center">
+      <div style="font-size:38px">🚀</div>
+      <h2 style="margin:6px 0">Paketlerimiz çok yakında!</h2>
+      <p style="color:var(--muted)">Şimdilik <strong>demo sürümle</strong> Fixpre'yi ücretsiz keşfedin. Ücretli paketler aktif olunca size haber vereceğiz.</p>
+    </div>
+    <div class="card">
+      <h2>📩 Paketlerden haberdar olun</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">E-postanızı bırakın; paketler açılınca size dönelim. İşletme büyüklüğünüzü yazarsanız size uygun teklif hazırlarız.</p>
+      <div class="field"><label>E-posta</label><input id="lead_email" type="email" value="${esc(u.email || "")}" placeholder="ornek@firma.com" /></div>
+      <div class="row">
+        <div class="field"><label>Personel sayısı</label><input id="lead_staff" type="number" min="0" value="${staff}" /></div>
+        <div class="field"><label>Şef sayısı</label><input id="lead_chefs" type="number" min="0" value="${chefs}" /></div>
+        <div class="field"><label>Lokasyon sayısı</label><input id="lead_venues" type="number" min="0" value="${venues}" /></div>
+      </div>
+      <div class="field"><label>Not (opsiyonel)</label><textarea id="lead_note" placeholder="Eklemek istedikleriniz..."></textarea></div>
+      <button class="btn-primary" id="lead_send">Gönder</button>
+      <div class="error-msg" id="lead_msg"></div>
     </div>
   `;
+}
+
+function wirePackages(u) {
+  const btn = document.getElementById("lead_send");
+  if (!btn) return;
+  btn.onclick = async () => {
+    const email = document.getElementById("lead_email").value.trim();
+    const msg = document.getElementById("lead_msg");
+    if (!email) { msg.style.color = ""; msg.textContent = "Lütfen e-posta girin."; return; }
+    btn.disabled = true; msg.style.color = ""; msg.textContent = "";
+    try {
+      await leadSubmit({
+        email, name: u.name,
+        staff: parseInt(document.getElementById("lead_staff").value, 10) || 0,
+        chefs: parseInt(document.getElementById("lead_chefs").value, 10) || 0,
+        venues: parseInt(document.getElementById("lead_venues").value, 10) || 0,
+        note: document.getElementById("lead_note").value.trim(),
+        orgId: ownerIdOf(u),
+      });
+      msg.style.color = "#059669";
+      msg.textContent = "Teşekkürler! Paketler açılınca size döneceğiz. 🚀";
+    } catch (e) {
+      btn.disabled = false;
+      msg.textContent = "Gönderilemedi, tekrar deneyin.";
+    }
+  };
+}
+
+// Süper admin: gelen ilgi talepleri (lead) listesi
+function leadsView(u) {
+  return `
+    <div class="section-title">📩 İlgi Talepleri</div>
+    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Demo kullanıcılarının paket ilgi formundan gelenler (en yeni üstte).</p>
+    <div id="leads_list"><div class="empty">Yükleniyor…</div></div>
+  `;
+}
+function wireLeadsView(u) {
+  leadsGet().then((res) => {
+    const list = document.getElementById("leads_list");
+    if (!list) return;
+    const leads = (res && res.leads) || [];
+    list.innerHTML = leads.length ? leads.map((l) => `
+      <div class="list-item">
+        <div>
+          <div class="title">${esc(l.email)}${l.name ? " · " + esc(l.name) : ""}</div>
+          <div class="meta">👥 ${l.staff} personel · 👔 ${l.chefs} şef · 📍 ${l.venues} lokasyon${l.note ? " · " + esc(l.note) : ""}</div>
+          <div class="meta">${fmtDate(l.created_at)}</div>
+        </div>
+      </div>`).join("") : `<div class="empty">Henüz talep yok.</div>`;
+  }).catch(() => {
+    const list = document.getElementById("leads_list");
+    if (list) list.innerHTML = `<div class="empty">Yüklenemedi.</div>`;
+  });
 }
 
 /* ============================================================

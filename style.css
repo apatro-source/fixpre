@@ -222,6 +222,11 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 }
 .lp-seo h2 { font-size: 22px; margin-bottom: 8px; }
 
+/* "Çok yakında" paket kutusu */
+.lp-soon { text-align: center; }
+.lp-soon h2 { font-size: 24px; margin: 8px 0; }
+.lp-plans .lp-soon { padding: 36px 20px; background: linear-gradient(135deg, #eef2ff, #fce7f3); border-radius: 20px; }
+
 @media (max-width: 760px) { .lp-roles-grid { flex-direction: column; align-items: center; } .lp-arrow { transform: rotate(90deg); } }
 
 .lp-plans { margin: 10px 0 40px; }
