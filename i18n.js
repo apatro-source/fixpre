@@ -183,8 +183,9 @@ const I18N_ROWS = [
   [" mekan ekleyebilirsiniz. Daha fazlası için ", " venues. For more, contact ", " Standorte. Für mehr kontaktieren Sie ", " объектов. Для большего напишите ", " lugares. Para más, contacte ", " sedi. Per altro, contatta "],
   [" şef ekleyebilirsiniz. Daha fazlası için ", " chefs. For more, contact ", " Chefs. Für mehr kontaktieren Sie ", " шефов. Для большего напишите ", " jefes. Para más, contacte ", " capi. Per altro, contatta "],
   [" ile iletişime geçin.", ".", ".", ".", ".", "."],
-  ["Bildirimler", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
-  ["Bildirim", "Reports", "Meldungen", "Сообщения", "Avisos", "Segnalazioni"],
+  ["Bildirimleri Aç", "Enable notifications", "Benachrichtigungen aktivieren", "Включить уведомления", "Activar notificaciones", "Attiva notifiche"],
+  ["Bildirimler", "Notifications", "Benachrichtigungen", "Уведомления", "Notificaciones", "Notifiche"],
+  ["Bildirim", "Notification", "Benachrichtigung", "Уведомление", "Notificación", "Notifica"],
 
   // --- Pano ---
   ["Bugün Aktif", "Active Today", "Heute aktiv", "Активно сегодня", "Activas hoy", "Attive oggi"],
