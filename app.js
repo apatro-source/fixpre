@@ -1419,20 +1419,22 @@ function venueCheckHtml(venues, selectedIds, cls) {
 
 function staffAddForm(venues) {
   return `
-    <div class="card">
-      <h2>Yeni Personel Ekle</h2>
-      <div class="row">
-        <div class="field"><label>Ad Soyad</label><input id="s_name" placeholder="Ahmet Yılmaz" /></div>
-        <div class="field"><label>E-posta (giriş için)</label><input id="s_email" placeholder="ahmet@local" /></div>
+    <details class="cat" style="margin-bottom:18px">
+      <summary><span>➕ Yeni Personel Ekle</span></summary>
+      <div class="cat-body" style="padding:14px">
+        <div class="row">
+          <div class="field"><label>Ad Soyad</label><input id="s_name" placeholder="Ahmet Yılmaz" /></div>
+          <div class="field"><label>E-posta (giriş için)</label><input id="s_email" placeholder="ahmet@local" /></div>
+        </div>
+        <div class="field"><label>Şifre (giriş için)</label><input id="s_pw" placeholder="Personele verilecek şifre" /></div>
+        <div class="field">
+          <label>Görevli olduğu mekanlar</label>
+          <div class="checks">${venueCheckHtml(venues, [], "s_venue")}</div>
+        </div>
+        <button class="btn-primary" id="s_add">Personel Ekle</button>
+        <div class="error-msg" id="s_err"></div>
       </div>
-      <div class="field"><label>Şifre (giriş için)</label><input id="s_pw" placeholder="Personele verilecek şifre" /></div>
-      <div class="field">
-        <label>Görevli olduğu mekanlar</label>
-        <div class="checks">${venueCheckHtml(venues, [], "s_venue")}</div>
-      </div>
-      <button class="btn-primary" id="s_add">Personel Ekle</button>
-      <div class="error-msg" id="s_err"></div>
-    </div>`;
+    </details>`;
 }
 
 function staffEditForm(s, venues) {
@@ -1591,15 +1593,17 @@ function mgrVenues(u) {
   const isOwner = u.role === "yonetici";
   const venues = visibleVenues(u);
   const addForm = isOwner ? `
-    <div class="card">
-      <h2>Yeni Mekan Ekle</h2>
-      <div class="row">
-        <div class="field"><label>Mekan adı</label><input id="v_name" placeholder="Örn: Merkez Şube" /></div>
-        <div class="field"><label>Adres (opsiyonel)</label><input id="v_addr" placeholder="Adres" /></div>
+    <details class="cat" style="margin-bottom:18px">
+      <summary><span>➕ Yeni Mekan Ekle</span></summary>
+      <div class="cat-body" style="padding:14px">
+        <div class="row">
+          <div class="field"><label>Mekan adı</label><input id="v_name" placeholder="Örn: Merkez Şube" /></div>
+          <div class="field"><label>Adres (opsiyonel)</label><input id="v_addr" placeholder="Adres" /></div>
+        </div>
+        <button class="btn-primary" id="v_add">Mekan Ekle</button>
+        <div class="error-msg" id="v_err"></div>
       </div>
-      <button class="btn-primary" id="v_add">Mekan Ekle</button>
-      <div class="error-msg" id="v_err"></div>
-    </div>` : "";
+    </details>` : "";
 
   return addForm + `
     <div class="section-title">${isOwner ? "Mekanlar" : "Mekanlarım"} (${venues.length})</div>
@@ -1733,23 +1737,25 @@ function mgrLog(u) {
 /* --- Şefler sekmesi (yalnızca yönetici) --- */
 function chefAddForm(venues) {
   return `
-    <div class="card">
-      <h2>Yeni Şef Ekle</h2>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
-        Şef, atadığınız mekanlarda kendi personelini ekleyip onlara görev verebilir.
-      </p>
-      <div class="row">
-        <div class="field"><label>Ad Soyad</label><input id="cf_name" placeholder="Mehmet Şef" /></div>
-        <div class="field"><label>E-posta (giriş için)</label><input id="cf_email" placeholder="mehmet@local" /></div>
+    <details class="cat" style="margin-bottom:18px">
+      <summary><span>➕ Yeni Şef Ekle</span></summary>
+      <div class="cat-body" style="padding:14px">
+        <p style="color:var(--muted);font-size:13px;margin:0 0 14px">
+          Şef, atadığınız mekanlarda kendi personelini ekleyip onlara görev verebilir.
+        </p>
+        <div class="row">
+          <div class="field"><label>Ad Soyad</label><input id="cf_name" placeholder="Mehmet Şef" /></div>
+          <div class="field"><label>E-posta (giriş için)</label><input id="cf_email" placeholder="mehmet@local" /></div>
+        </div>
+        <div class="field"><label>Şifre (giriş için)</label><input id="cf_pw" placeholder="Şefe verilecek şifre" /></div>
+        <div class="field">
+          <label>Sorumlu olduğu mekanlar</label>
+          <div class="checks">${venueCheckHtml(venues, [], "cf_venue")}</div>
+        </div>
+        <button class="btn-primary" id="cf_add">Şef Ekle</button>
+        <div class="error-msg" id="cf_err"></div>
       </div>
-      <div class="field"><label>Şifre (giriş için)</label><input id="cf_pw" placeholder="Şefe verilecek şifre" /></div>
-      <div class="field">
-        <label>Sorumlu olduğu mekanlar</label>
-        <div class="checks">${venueCheckHtml(venues, [], "cf_venue")}</div>
-      </div>
-      <button class="btn-primary" id="cf_add">Şef Ekle</button>
-      <div class="error-msg" id="cf_err"></div>
-    </div>`;
+    </details>`;
 }
 
 function chefEditForm(c, venues) {
