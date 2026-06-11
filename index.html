@@ -3,7 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Fixpre</title>
+<title>Fixpre — Personel Görev, Vardiya ve İzin Yönetimi</title>
+
+<!-- SEO: arama motorları için -->
+<meta name="description" content="Fixpre; kafe, restoran, market ve işletmeler için personel görev, haftalık vardiya ve izin/mesai yönetimi. Görev atama, vardiya planı, izin takibi, talepler ve duyurular. 6 dilde, ücretsiz başlayın — fixpre.com" />
+<meta name="keywords" content="personel görev yönetimi, vardiya programı, vardiya planlama, izin takip, mesai takip, restoran personel yönetimi, çalışan görev atama, işletme yönetim uygulaması, staff task management" />
+<meta name="author" content="Fixpre" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://fixpre.com/" />
+
+<!-- Sosyal paylaşım (WhatsApp, Facebook, LinkedIn) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Fixpre" />
+<meta property="og:title" content="Fixpre — Personel Görev, Vardiya ve İzin Yönetimi" />
+<meta property="og:description" content="İşletmeniz için personel görev, vardiya ve izin yönetimi. Ücretsiz başlayın." />
+<meta property="og:url" content="https://fixpre.com/" />
+<meta property="og:image" content="https://fixpre.com/icon-512.png" />
+<meta property="og:locale" content="tr_TR" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Fixpre — Personel Görev & Vardiya Yönetimi" />
+<meta name="twitter:description" content="İşletmeniz için personel görev, vardiya ve izin yönetimi. Ücretsiz başlayın." />
+<meta name="twitter:image" content="https://fixpre.com/icon-512.png" />
+
 <link rel="stylesheet" href="style.css" />
 
 <!-- PWA: telefona yüklenebilir uygulama -->
@@ -17,7 +38,33 @@
 <meta name="apple-mobile-web-app-title" content="Fixpre" />
 </head>
 <body>
-  <div id="app"></div>
+  <!-- Arama motorları için açıklama (uygulama yüklenince JS bunu değiştirir) -->
+  <div id="app">
+    <main style="max-width:720px;margin:40px auto;padding:0 20px;font-family:system-ui,sans-serif">
+      <h1>Fixpre — Personel Görev, Vardiya ve İzin Yönetimi</h1>
+      <p>Fixpre; kafe, restoran, market ve işletmeler için personel <strong>görev yönetimi</strong>,
+      <strong>haftalık vardiya planı</strong> ve <strong>izin/mesai takibi</strong> sunan online bir uygulamadır.</p>
+      <ul>
+        <li>Görev atama, tekrarlayan görevler ve tamamlanma takibi</li>
+        <li>Haftalık vardiya planı ve vardiya/izin değişiklik talepleri</li>
+        <li>İzin ve fazla/eksik mesai takibi, talepler ve duyurular</li>
+        <li>Yönetici, şef ve personel rolleri · 6 dil · telefona kurulabilir (PWA)</li>
+      </ul>
+      <p>Ücretsiz başlayın: <a href="https://fixpre.com/">fixpre.com</a></p>
+    </main>
+  </div>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Fixpre",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "description": "Kafe, restoran, market ve işletmeler için personel görev, vardiya ve izin yönetimi uygulaması.",
+    "url": "https://fixpre.com/",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
   <script src="i18n.js"></script>
   <script src="app.js"></script>
   <script>
