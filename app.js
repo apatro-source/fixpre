@@ -791,7 +791,8 @@ function renderManager(u) {
   const izinLabel = "İzin / Mesai" + (leaveCount ? ` (${leaveCount})` : "");
   const vardiyaCount = isOwner
     ? (DB.shiftReqs || []).filter((r) => r.ownerId === ownerIdOf(u) && r.status === "beklemede").length
-    : (DB.shiftReqs || []).filter((r) => r.requesterId === u.id && r.status !== "beklemede" && !r.seenByReporter).length;
+    : (DB.shiftReqs || []).filter((r) => (r.withUserId === u.id && r.status === "personel_onay") ||
+        (r.requesterId === u.id && (r.status === "onaylandi" || r.status === "reddedildi") && !r.seenByReporter)).length;
   const vardiyaLabel = "Vardiya" + (vardiyaCount ? ` (${vardiyaCount})` : "");
   const tabs = isOwner
     ? [
@@ -1206,26 +1207,36 @@ function markShiftSeen(u) {
   if (ch) saveDB(DB);
 }
 
-function shiftReqCard(r, canDecide) {
+function shiftReqCard(u, r) {
   const who = userById(r.requesterId);
   const withU = r.withUserId ? userById(r.withUserId) : null;
-  const pending = r.status === "beklemede";
   const approved = r.status === "onaylandi";
+  const rejected = r.status === "reddedildi";
+  const colleagueStage = r.status === "personel_onay";
+  const mgrStage = r.status === "beklemede";
   const typeLabel = r.type === "takas" ? "🔄 Vardiya değişikliği" : "🏖️ İzin günü";
   const baseDetail = r.type === "takas"
-    ? `${fmtDay(r.date)}${withU ? " · " + esc(withU.name) + " ile" : ""}${r.withDate ? " · siz: " + fmtDay(r.withDate) : ""}`
+    ? `${fmtDay(r.date)}${withU ? " · " + esc(withU.name) + " ile" : ""}`
     : fmtDay(r.date);
   const detail = baseDetail + (r.freeDate ? ` · eski izin: ${fmtDay(r.freeDate)} → çalışıyor` : "");
-  const st = pending ? `<span class="badge badge-open">Beklemede</span>`
+  const st = colleagueStage ? `<span class="badge badge-open">Personel onayı bekliyor</span>`
+    : mgrStage ? `<span class="badge badge-open">Yönetici onayı bekliyor</span>`
     : approved ? `<span class="badge badge-done">Onaylandı</span>`
     : `<span class="badge badge-rej">Reddedildi</span>`;
+  const canColleague = colleagueStage && r.withUserId === u.id;
+  const canMgr = mgrStage && u.role === "yonetici";
   return `
-    <div class="report ${approved ? "resolved" : ""} ${(!pending && !approved) ? "rejected" : ""}">
+    <div class="report ${approved ? "resolved" : ""} ${rejected ? "rejected" : ""}">
       <div class="report-head"><span class="rcat">${typeLabel}</span>${st}</div>
       <div class="report-text"><strong>${detail}</strong>${r.note ? ` — ${esc(r.note)}` : ""}</div>
       <div class="report-meta">${roleIcon(who)} ${esc(who ? who.name : "?")} · ${fmtDate(r.createdAt)}</div>
-      ${(!pending) ? `<div class="report-reply">${approved ? "✅ Onaylandı" : "❌ Reddedildi"}${r.decisionNote ? ": " + esc(r.decisionNote) : ""}</div>` : ""}
-      ${(pending && canDecide) ? `
+      ${(approved || rejected) ? `<div class="report-reply">${approved ? "✅ Onaylandı" : "❌ Reddedildi"}${r.decisionNote ? ": " + esc(r.decisionNote) : ""}</div>` : ""}
+      ${canColleague ? `
+        <div class="report-actions">
+          <button class="btn-green btn-sm" data-src-ok="${r.id}">Takası Onayla</button>
+          <button class="btn-danger btn-sm" data-src-no="${r.id}">Reddet</button>
+        </div>` : ""}
+      ${canMgr ? `
         <div class="report-actions">
           <input class="srdec-note" data-srnote="${r.id}" placeholder="Not (opsiyonel)" />
           <button class="btn-green btn-sm" data-sr-ok="${r.id}">Onayla</button>
@@ -1269,14 +1280,20 @@ function shiftView(u) {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     mgrReqs = `
       <div class="section-title" style="margin-top:20px">Bekleyen Değişiklik Talepleri (${pend.length})</div>
-      ${pend.length ? pend.map((r) => shiftReqCard(r, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}`;
+      ${pend.length ? pend.map((r) => shiftReqCard(u, r)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}`;
   }
 
   let reqBlock = "";
   if (!isMgr) {
     const opts = people.filter((p) => p.id !== u.id).map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    const incoming = (DB.shiftReqs || []).filter((r) => r.withUserId === u.id && r.status === "personel_onay")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const incomingBlock = incoming.length ? `
+      <div class="section-title" style="margin-top:18px">📥 Size Gelen Takas Talepleri (${incoming.length})</div>
+      ${incoming.map((r) => shiftReqCard(u, r)).join("")}` : "";
     const mine = (DB.shiftReqs || []).filter((r) => r.requesterId === u.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     reqBlock = `
+      ${incomingBlock}
       <details class="cat" style="margin:18px 0">
         <summary><span>📝 Değişiklik / İzin Talebi</span></summary>
         <div class="cat-body" style="padding:14px">
@@ -1289,16 +1306,18 @@ function shiftView(u) {
           </div>
           <div class="field"><label>Eski izin gününüz — çalışmaya dönecek (opsiyonel)</label><input id="sr_free" type="date" /></div>
           <div class="row" id="sr_swap_f" style="display:none">
-            <div class="field"><label>Kiminle</label><select id="sr_with">${opts}</select></div>
-            <div class="field"><label>Onun yerine geleceğiniz gün</label><input id="sr_withdate" type="date" /></div>
+            <div class="field"><label>Kiminle takas</label><select id="sr_with">${opts}</select></div>
           </div>
+          <p id="sr_swap_hint" style="display:none;color:var(--muted);font-size:12.5px;margin:-4px 0 10px">
+            Takas: <strong>İstediğiniz izin günü</strong> seçtiğiniz kişiye çalışma günü olur; <strong>Eski izin gününüz</strong> ona izinli gün olur. Önce o kişi, sonra yönetici onaylar.
+          </p>
           <div class="field"><label>Açıklama</label><textarea id="sr_note" placeholder="Ör: Doktor randevum var, o gün izinli olmak istiyorum"></textarea></div>
           <button class="btn-primary" id="sr_send">Talebi Yöneticiye Gönder</button>
           <div class="error-msg" id="sr_err"></div>
         </div>
       </details>
       <div class="section-title">Taleplerim (${mine.length})</div>
-      ${mine.length ? mine.map((r) => shiftReqCard(r, false)).join("") : `<div class="empty">Henüz talebiniz yok.</div>`}`;
+      ${mine.length ? mine.map((r) => shiftReqCard(u, r)).join("") : `<div class="empty">Henüz talebiniz yok.</div>`}`;
   }
 
   return `
@@ -1332,12 +1351,23 @@ function decideShiftReq(id, status, u) {
       const i = DB.shifts.findIndex((s) => s.userId === userId && s.date === dk);
       if (i >= 0) DB.shifts.splice(i, 1);
     };
-    addOff(r.requesterId, r.date);
-    if (r.freeDate) removeOff(r.requesterId, r.freeDate);   // eski izin günü → çalışıyor
-    if (r.type === "takas" && r.withUserId && r.withDate) addOff(r.withUserId, r.withDate);
+    if (r.type === "takas") {
+      // Karşılıklı takas: istenen gün ↔ eski izin günü iki kişi arasında yer değiştirir
+      addOff(r.requesterId, r.date);        // isteyen: yeni izin günü
+      removeOff(r.requesterId, r.freeDate); // isteyen: eski izin günü → çalışıyor
+      if (r.withUserId) {
+        addOff(r.withUserId, r.freeDate);   // karşı kişi: o gün izinli olur
+        removeOff(r.withUserId, r.date);    // karşı kişi: istenen günde çalışır
+      }
+    } else {
+      addOff(r.requesterId, r.date);
+      if (r.freeDate) removeOff(r.requesterId, r.freeDate);   // eski izin günü → çalışıyor
+    }
   }
   saveDB(DB);
-  notifyUsers([r.requesterId], "Vardiya/izin talebiniz", status === "onaylandi" ? "Onaylandı ✅" : "Reddedildi ❌", "/");
+  const targets = [r.requesterId];
+  if (r.type === "takas" && r.withUserId) targets.push(r.withUserId);
+  notifyUsers(targets, "Vardiya/izin talebiniz", status === "onaylandi" ? "Onaylandı ✅" : "Reddedildi ❌", "/");
   render();
 }
 
@@ -1362,7 +1392,11 @@ function wireShift(u) {
   // Personel/şef: tür değişince takas alanlarını göster/gizle
   const typeSel = document.getElementById("sr_type");
   if (typeSel) {
-    const sync = () => { const f = document.getElementById("sr_swap_f"); if (f) f.style.display = typeSel.value === "takas" ? "" : "none"; };
+    const sync = () => {
+      const takas = typeSel.value === "takas";
+      const f = document.getElementById("sr_swap_f"); if (f) f.style.display = takas ? "" : "none";
+      const h = document.getElementById("sr_swap_hint"); if (h) h.style.display = takas ? "" : "none";
+    };
     typeSel.onchange = sync; sync();
   }
   const send = document.getElementById("sr_send");
@@ -1373,23 +1407,47 @@ function wireShift(u) {
     const err = document.getElementById("sr_err");
     if (!date) { err.textContent = "Tarih seçin."; return; }
     const freeDate = document.getElementById("sr_free").value || null;
+    const withUserId = type === "takas" ? (document.getElementById("sr_with").value || null) : null;
+    if (type === "takas" && !withUserId) { err.textContent = "Takas için kişi seçin."; return; }
+    // takas: önce karşı personel onaylar (personel_onay); izin: doğrudan yöneticiye (beklemede)
+    const status = type === "takas" ? "personel_onay" : "beklemede";
     const req = {
       id: uid(), ownerId: owner, requesterId: u.id, type, date, freeDate,
-      withUserId: null, withDate: null, note, status: "beklemede",
+      withUserId, withDate: null, note, status,
       createdAt: new Date().toISOString(), decidedBy: null, decidedAt: null, decisionNote: "", seenByReporter: true,
+      colleagueOk: null,
     };
-    if (type === "takas") {
-      req.withUserId = document.getElementById("sr_with").value || null;
-      req.withDate = document.getElementById("sr_withdate").value || null;
-    }
     DB.shiftReqs.push(req);
     saveDB(DB);
-    notifyUsers([owner], "Vardiya/izin değişiklik talebi", u.name, "/");
+    if (type === "takas") notifyUsers([withUserId], "Takas talebi onayınızı bekliyor", u.name, "/");
+    else notifyUsers([owner], "İzin/değişiklik talebi", u.name, "/");
     render();
   };
 
+  // Karşı personelin takas onayı/reddi (yöneticiye gitmeden önce)
+  document.querySelectorAll("[data-src-ok]").forEach((b) => { b.onclick = () => colleagueDecide(b.dataset.srcOk, true, u); });
+  document.querySelectorAll("[data-src-no]").forEach((b) => { b.onclick = () => colleagueDecide(b.dataset.srcNo, false, u); });
+  // Yönetici onay/ret
   document.querySelectorAll("[data-sr-ok]").forEach((b) => { b.onclick = () => decideShiftReq(b.dataset.srOk, "onaylandi", u); });
   document.querySelectorAll("[data-sr-no]").forEach((b) => { b.onclick = () => decideShiftReq(b.dataset.srNo, "reddedildi", u); });
+}
+
+// Takas edilen personelin ön onayı
+function colleagueDecide(id, ok, u) {
+  const r = (DB.shiftReqs || []).find((x) => x.id === id);
+  if (!r || r.withUserId !== u.id || r.status !== "personel_onay") return;
+  if (ok) {
+    r.status = "beklemede"; r.colleagueOk = true;   // sıra yöneticide
+    saveDB(DB);
+    notifyUsers([r.ownerId], "Takas — personel onayladı", u.name, "/");
+  } else {
+    r.status = "reddedildi"; r.colleagueOk = false;
+    r.decisionNote = "Takas edilen personel reddetti";
+    r.decidedAt = new Date().toISOString(); r.seenByReporter = false;
+    saveDB(DB);
+    notifyUsers([r.requesterId], "Takas talebiniz", "Personel reddetti ❌", "/");
+  }
+  render();
 }
 
 function perfView(u) {
@@ -2740,7 +2798,8 @@ function wireAnnouncements(u) {
 function renderStaff(u) {
   const repNotif = myReports(u).filter((r) => r.status === "cozuldu" && !r.seenByReporter).length;
   const leaveNotif = myLeaves(u).filter((l) => l.status !== "beklemede" && !l.seenByReporter).length;
-  const shiftNotif = (DB.shiftReqs || []).filter((r) => r.requesterId === u.id && r.status !== "beklemede" && !r.seenByReporter).length;
+  const shiftNotif = (DB.shiftReqs || []).filter((r) => (r.withUserId === u.id && r.status === "personel_onay") ||
+    (r.requesterId === u.id && (r.status === "onaylandi" || r.status === "reddedildi") && !r.seenByReporter)).length;
   const tabs = [
     ["bugun", "Görevlerim"],
     ["gecmis", "Biten Görevler"],
