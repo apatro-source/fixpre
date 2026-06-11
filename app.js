@@ -102,6 +102,12 @@ function migrate(db) {
   return db;
 }
 
+// Bulut senkron durumu — loadDB() saveDB→cloudPush çağırdığı için BUNLAR loadDB'den ÖNCE tanımlanmalı (TDZ hatası olmasın)
+let cloudEnabled = false;
+let lastAppliedAt = null;
+let pushTimer = null;
+let pushing = false;
+
 let DB = loadDB();
 
 const SUPER_EMAIL = "h.dirmilli48@gmail.com";   // sınırsız + yetki veren hesap
@@ -3405,10 +3411,7 @@ function staffTaskCard(t, u, extra = "") {
    Yerelde (file://) localStorage modunda çalışır.
    ============================================================ */
 const CLOUD_KEY = "fixpre2026";   // /api/push için (Vercel FIXPRE_KEY ile aynı)
-let cloudEnabled = false;
-let lastAppliedAt = null;
-let pushTimer = null;
-let pushing = false;
+// cloudEnabled / lastAppliedAt / pushTimer / pushing yukarıda (loadDB öncesi) tanımlandı
 
 async function dataGet() {
   const r = await fetch("/api/data", { headers: { "Authorization": "Bearer " + authToken() } });
