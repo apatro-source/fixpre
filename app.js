@@ -175,6 +175,7 @@ async function doLogin(email, password) {
   const me = DB.users.find((x) => x.id === j.userId);
   if (me && me.lang !== guestLang()) { me.lang = guestLang(); saveDB(DB); }
   saveLocal(DB);
+  pushChecked = false;   // bu cihazın push aboneliği yeni kullanıcıya bağlansın (yanlış kişiye bildirim gitmesin)
 }
 
 async function doRegister(name, email, password) {
@@ -184,6 +185,7 @@ async function doRegister(name, email, password) {
   DB = migrate(j.data || emptyDB());
   if (j.plan) orgPlan = j.plan;
   saveLocal(DB);
+  pushChecked = false;   // yeni hesap bu cihaza push için bağlansın
 }
 
 function logout() {
@@ -191,6 +193,7 @@ function logout() {
   localStorage.removeItem(UID_KEY);
   DB = emptyDB();
   authMode = "login";
+  pushChecked = false;   // çıkışta aboneliği bırak; sonraki kullanıcı kendine bağlasın
   render();
 }
 
