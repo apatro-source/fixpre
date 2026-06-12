@@ -3131,10 +3131,10 @@ function visibleAnnouncements(u) {
   const all = DB.announcements.filter((a) => a.ownerId === owner);
   if (u.role === "yonetici") return all;
   if (u.role === "sef") {
-    return all.filter((a) => a.target === "org" || a.createdBy === u.id ||
+    return all.filter((a) => a.target === "org" || a.target === "chefs" || a.createdBy === u.id ||
       (a.venueIds || []).some((v) => (u.venueIds || []).includes(v)));
   }
-  // personel: org geneli veya kendi mekanına gelen duyurular
+  // personel: org geneli veya kendi mekanına gelen duyurular (şeflere özel duyuruları GÖRMEZ)
   return all.filter((a) => a.target === "org" ||
     (a.venueIds || []).some((v) => (u.venueIds || []).includes(v)));
 }
@@ -3143,8 +3143,9 @@ function announcementCompose(u) {
   const venues = visibleVenues(u);
   const isOwner = u.role === "yonetici";
   const allLabel = isOwner ? "Tüm Mekanlar (herkese)" : "Tüm Mekanlarım";
-  const opts = `<option value="all">${allLabel}</option>` +
-    venues.map((v) => `<option value="${v.id}">📍 ${esc(v.name)}</option>`).join("");
+  const opts = `<option value="all">${allLabel}</option>`
+    + (isOwner ? `<option value="chefs">👔 Sadece Şefler</option>` : "")
+    + venues.map((v) => `<option value="${v.id}">📍 ${esc(v.name)}</option>`).join("");
   return `
     <div class="card">
       <h2>📢 Duyuru Yap</h2>
@@ -3161,6 +3162,8 @@ function announcementCard(u, a) {
   let targetLabel;
   if (a.target === "org") {
     targetLabel = "Tüm Mekanlar";
+  } else if (a.target === "chefs") {
+    targetLabel = "👔 Şefler";
   } else {
     const names = (a.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
     targetLabel = names.length ? "📍 " + names.map(esc).join(", ") : "—";
@@ -3196,7 +3199,9 @@ function wireAnnouncements(u) {
     const err = document.getElementById("an_err");
     if (!text) { err.textContent = "Lütfen mesaj yazın."; return; }
     let target, venueIds = [];
-    if (targetVal === "all") {
+    if (targetVal === "chefs") {
+      target = "chefs";
+    } else if (targetVal === "all") {
       if (u.role === "yonetici") { target = "org"; }
       else { target = "venues"; venueIds = (u.venueIds || []).slice(); }
     } else {
@@ -3210,8 +3215,8 @@ function wireAnnouncements(u) {
     // hedefteki herkese bildirim
     const owner = ownerIdOf(u);
     const everyone = [...orgChefs(owner), ...orgStaff(owner)];
-    const recips = (target === "org")
-      ? everyone.map((p) => p.id)
+    const recips = (target === "org") ? everyone.map((p) => p.id)
+      : (target === "chefs") ? orgChefs(owner).map((p) => p.id)
       : everyone.filter((p) => (p.venueIds || []).some((v) => venueIds.includes(v))).map((p) => p.id);
     notifyUsers(recips.filter((id) => id !== u.id), "📢 Duyuru", text, "/");
     showAnnounce = false;

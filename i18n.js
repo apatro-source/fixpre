@@ -118,6 +118,8 @@ const I18N_ROWS = [
   ["📋 Lokasyonsuz personel", "📋 No location (staff)", "📋 Ohne Standort (Personal)", "📋 Без локации (персонал)", "📋 Sin ubicación (personal)", "📋 Senza sede (personale)"],
   ["📋 Lokasyonsuz şef", "📋 No location (chef)", "📋 Ohne Standort (Chef)", "📋 Без локации (шеф)", "📋 Sin ubicación (jefe)", "📋 Senza sede (capo)"],
   ["📋 Lokasyonsuz", "📋 No location", "📋 Ohne Standort", "📋 Без локации", "📋 Sin ubicación", "📋 Senza sede"],
+  ["👔 Sadece Şefler", "👔 Chefs only", "👔 Nur Chefs", "👔 Только шефы", "👔 Solo jefes", "👔 Solo capi"],
+  ["👔 Şefler", "👔 Chefs", "👔 Chefs", "👔 Шефы", "👔 Jefes", "👔 Capi"],
   ["🟢 Fazla & Telafi = alacak · 🔴 İzin & Geç gelme & Eksik = borç · (1 gün = ", "🟢 Overtime & Comp = credit · 🔴 Leave & Late & Undertime = debt · (1 day = ", "🟢 Über & Ausgleich = Guthaben · 🔴 Urlaub & Verspätung & Unter = Schuld · (1 Tag = ", "🟢 Сверх & Отгул = плюс · 🔴 Отпуск & Опоздание & Недо = долг · (1 день = ", "🟢 Extra & Comp = a favor · 🔴 Permiso & Tarde & Falta = deuda · (1 día = ", "🟢 Extra & Recupero = credito · 🔴 Permesso & Ritardo & Meno = debito · (1 giorno = "],
   [" saat). Lokasyona göre gruplu.", " h). Grouped by location.", " Std). Nach Standort gruppiert.", " ч). Сгруппировано по локации.", " h). Agrupado por ubicación.", " h). Raggruppato per sede."],
 
