@@ -1533,6 +1533,19 @@ function shiftReqCard(u, r) {
     </div>`;
 }
 
+// Bir vardiya hücresinin görünümü (sınıf/içerik/başlık) — hem render hem yerinde güncelleme kullanır
+function shiftCellContent(userId, dk) {
+  const st = cellState(userId, dk);
+  if (st.kind === "off") return { cls: "off", html: "🏖️", title: "İzinli" };
+  if (st.kind === "assign") {
+    const d = defById(st.defId);
+    return d
+      ? { cls: "shift", html: `<span class="sh-lab">${esc(d.label)}</span>`, title: `${d.label} ${d.start}–${d.end}` }
+      : { cls: "on", html: "✅", title: "Çalışıyor" };
+  }
+  return { cls: "on", html: "✅", title: "Çalışıyor" };
+}
+
 function shiftView(u) {
   const owner = ownerIdOf(u);
   const isMgr = u.role === "yonetici";
@@ -1550,17 +1563,6 @@ function shiftView(u) {
     }).join("")}
   </div>`;
 
-  const cellInner = (userId, dk) => {
-    const st = cellState(userId, dk);
-    if (st.kind === "off") return { cls: "off", html: "🏖️", title: "İzinli" };
-    if (st.kind === "assign") {
-      const d = defById(st.defId);
-      return d
-        ? { cls: "shift", html: `<span class="sh-lab">${esc(d.label)}</span>`, title: `${d.label} ${d.start}–${d.end}` }
-        : { cls: "on", html: "✅", title: "Çalışıyor" };
-    }
-    return { cls: "on", html: "✅", title: "Çalışıyor" };
-  };
   // Şef onay yetkisi varsa kendi lokasyonunun ızgarasını da düzenleyebilir (kontrol yöneticide)
   const canEdit = isMgr || (u.role === "sef" && approvalSetting("shift") === "sef");
   const gridFor = (ppl) => {
@@ -1568,7 +1570,7 @@ function shiftView(u) {
       <div class="sh-row">
         <div class="sh-name">${roleIcon(p)} ${esc(p.name)}</div>
         ${dates.map((dk) => {
-          const c = cellInner(p.id, dk);
+          const c = shiftCellContent(p.id, dk);
           return canEdit
             ? `<button class="sh-cell ${c.cls}" data-shift="${p.id}|${dk}" title="${c.title}">${c.html}</button>`
             : `<div class="sh-cell ${c.cls}" title="${c.title}">${c.html}</div>`;
@@ -1758,7 +1760,12 @@ function wireShift(u) {
         if (i >= 0 && i < defs.length - 1) { nextKind = "assign"; nextDef = defs[i + 1].id; } else nextKind = "off";
       } else { nextKind = "work"; }
       setCell(owner, pid, dk, nextKind, u.id, nextDef);
-      saveDB(DB); render();
+      saveDB(DB);
+      // Sayfa/ızgara kaymasın diye TÜM ekranı yeniden çizme; sadece bu hücreyi güncelle
+      const c = shiftCellContent(pid, dk);
+      b.className = "sh-cell " + c.cls;
+      b.title = c.title;
+      b.innerHTML = c.html;
     };
   });
 
