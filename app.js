@@ -591,12 +591,25 @@ function guestLang() {
   return "en";   // desteklemediğimiz dil → İngilizce
 }
 
+// Aktif dil
+function activeLang() {
+  const u = currentUser();
+  return u ? (u.lang || "tr") : guestLang();
+}
+// Tek bir metni anlık çevir (dinamik hata/uyarı mesajları için)
+function t(s) {
+  return (typeof translateString === "function") ? translateString(s, activeLang()) : s;
+}
+
 // Render sonrası ekranı kullanıcının (veya giriş öncesi misafir) diline çevir
 function translateUI() {
-  const u = currentUser();
-  const lang = u ? (u.lang || "tr") : guestLang();
-  if (typeof translateNode === "function") translateNode(app, lang);
+  if (typeof translateNode === "function") translateNode(app, activeLang());
 }
+
+// Tıklama/Enter sonrası dinamik olarak değişen metinleri (hata/uyarı) da çevir.
+// TR kullanıcıda işlem yapmaz (erken döner); diğer dillerde err.textContent vb. anında çevrilir.
+document.addEventListener("click", () => setTimeout(translateUI, 0), true);
+document.addEventListener("keyup", (e) => { if (e.key === "Enter") setTimeout(translateUI, 0); }, true);
 
 // Profil penceresi: dil tercihi + şifre değiştirme (her rol için)
 // Duyuru yap penceresi (üst bardaki 📢 ikonu)
@@ -3572,11 +3585,11 @@ function urlBase64ToUint8Array(b64) {
 async function ensurePushSubscribed(u, force) {
   if (!cloudEnabled || !u) return;
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-    if (force) alert("Bu cihaz/tarayıcı bildirimleri desteklemiyor. (iPhone'da: önce uygulamayı ana ekrana ekleyin.)");
+    if (force) alert(t("Bu cihaz/tarayıcı bildirimleri desteklemiyor. (iPhone'da: önce uygulamayı ana ekrana ekleyin.)"));
     return;
   }
   if (Notification.permission === "denied") {
-    if (force) alert("Bildirim izni reddedilmiş. Tarayıcı ayarlarından fixpre.com için izin vermelisiniz.");
+    if (force) alert(t("Bildirim izni reddedilmiş. Tarayıcı ayarlarından fixpre.com için izin vermelisiniz."));
     return;
   }
   if (Notification.permission !== "granted") {
@@ -3598,8 +3611,8 @@ async function ensurePushSubscribed(u, force) {
       headers: { "Content-Type": "application/json", "x-fixpre-key": CLOUD_KEY },
       body: JSON.stringify({ type: "subscribe", userId: u.id, sub }),
     });
-    if (force) alert("Bildirimler açıldı! ✅");
-  } catch (e) { if (force) alert("Bildirim kurulamadı: " + (e && e.message)); }
+    if (force) alert(t("Bildirimler açıldı! ✅"));
+  } catch (e) { if (force) alert(t("Bildirim kurulamadı:") + " " + (e && e.message)); }
 }
 
 // Belirli kullanıcılara push gönder (tetikleyici olaylarda çağrılır)
