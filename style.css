@@ -236,12 +236,59 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .landing .login-wrap { min-height: auto; padding: 20px 0 50px; }
 .lp-foot { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0 40px; border-top: 1px solid var(--border); }
 
+/* ---- Landing: ortak başlık stili (görsel tazeleme) ---- */
+.lp-shots, .lp-how, .lp-reviews, .lp-faq { margin: 14px 0 44px; }
+.lp-shots > h2, .lp-how > h2, .lp-reviews > h2, .lp-faq > h2, .lp-roles > h2, .lp-sectors > h2, .lp-plans h2, .lp-seo > h2 {
+  font-size: 26px; text-align: center; margin-bottom: 6px;
+}
+
+/* ---- Özellik vitrini (ekran görüntüleri) ---- */
+.lp-shots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 20px; }
+.lp-shot { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.lp-shot:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(99,102,241,.18); }
+.lp-shot-img { position: relative; aspect-ratio: 16/10; background: linear-gradient(135deg, #eef2ff, #fce7f3); display: flex; align-items: center; justify-content: center; }
+.lp-shot-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lp-shot-ph { display: none; font-size: 46px; opacity: .55; }
+.lp-shot-img.noimg img { display: none; }
+.lp-shot-img.noimg .lp-shot-ph { display: block; }
+.lp-shot h3 { font-size: 16px; margin: 14px 16px 4px; }
+.lp-shot p { font-size: 13.5px; color: var(--muted); margin: 0 16px 16px; }
+
+/* ---- Nasıl çalışır (adımlar) ---- */
+.lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 18px; }
+.lp-step { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 20px 16px; text-align: center; }
+.lp-step-n { width: 40px; height: 40px; margin: 0 auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; color: #fff; background: linear-gradient(135deg, #6366f1, #ec4899); }
+.lp-step h3 { font-size: 16px; margin-bottom: 4px; }
+.lp-step p { font-size: 13.5px; color: var(--muted); }
+
+/* ---- Müşteri yorumları ---- */
+.lp-reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.lp-review { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; }
+.lp-stars { color: #f59e0b; letter-spacing: 2px; margin-bottom: 8px; }
+.lp-review p { font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+.lp-review-who { font-size: 13px; color: var(--muted); }
+.lp-trust { margin-top: 18px; font-weight: 600; }
+
+/* ---- SSS (FAQ) ---- */
+.lp-faq { max-width: 760px; margin-left: auto; margin-right: auto; }
+.lp-faq-item { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 10px; }
+.lp-faq-item > summary { list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+.lp-faq-item > summary::-webkit-details-marker { display: none; }
+.lp-faq-item > summary::after { content: "+"; color: var(--primary); font-size: 22px; font-weight: 700; }
+.lp-faq-item[open] > summary::after { content: "−"; }
+.lp-faq-a { padding: 0 18px 16px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+@media (max-width: 860px) {
+  .lp-shots-grid, .lp-reviews-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-steps { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 760px) {
   .lp-features { grid-template-columns: 1fr 1fr; }
   .lp-hero h1 { font-size: 26px; }
 }
-@media (max-width: 460px) {
+@media (max-width: 480px) {
   .lp-features { grid-template-columns: 1fr; }
+  .lp-shots-grid, .lp-reviews-grid, .lp-steps { grid-template-columns: 1fr; }
 }
 .hint {
   margin-top: 20px; padding: 13px; background: #f4f1ff;

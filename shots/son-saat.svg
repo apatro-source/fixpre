@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <rect width="400" height="250" fill="#f8fafc"/>
+  <!-- Task card -->
+  <rect x="24" y="26" width="352" height="96" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <circle cx="50" cy="56" r="9" fill="none" stroke="#6366f1" stroke-width="2.5"/>
+  <text x="70" y="55" font-size="16" font-weight="700" fill="#1e293b">Close the register</text>
+  <text x="70" y="76" font-size="12" fill="#64748b">Evening shift · Main Branch</text>
+  <rect x="70" y="90" width="118" height="22" rx="11" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="82" y="105" font-size="12" font-weight="700" fill="#dc2626">⏰ Due 18:00</text>
+  <!-- Reminder toast -->
+  <rect x="24" y="142" width="352" height="80" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="24" y="142" width="6" height="80" rx="3" fill="#6366f1"/>
+  <circle cx="60" cy="182" r="17" fill="#eef2ff"/>
+  <text x="60" y="188" font-size="17" text-anchor="middle">⏰</text>
+  <text x="88" y="176" font-size="14" font-weight="700" fill="#1e293b">1 hour to deadline</text>
+  <text x="88" y="197" font-size="12" fill="#64748b">Close the register — don't forget!</text>
+</svg>

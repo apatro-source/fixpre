@@ -13,6 +13,15 @@
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://fixpre.com/" />
 
+<!-- Çok dilli SEO: kendi dilinde arayan da bulsun (?hl= ile dil) -->
+<link rel="alternate" hreflang="x-default" href="https://fixpre.com/" />
+<link rel="alternate" hreflang="en" href="https://fixpre.com/?hl=en" />
+<link rel="alternate" hreflang="tr" href="https://fixpre.com/?hl=tr" />
+<link rel="alternate" hreflang="de" href="https://fixpre.com/?hl=de" />
+<link rel="alternate" hreflang="ru" href="https://fixpre.com/?hl=ru" />
+<link rel="alternate" hreflang="es" href="https://fixpre.com/?hl=es" />
+<link rel="alternate" hreflang="it" href="https://fixpre.com/?hl=it" />
+
 <!-- Social sharing (WhatsApp, Facebook, LinkedIn) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Fixpre" />
@@ -67,6 +76,22 @@
     "url": "https://fixpre.com/",
     "inLanguage": ["en", "tr", "de", "ru", "es", "it"],
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {"@type":"Question","name":"Is Fixpre free?","acceptedAnswer":{"@type":"Answer","text":"Yes, you can use all features free in the demo version. Paid plans are coming soon."}},
+      {"@type":"Question","name":"Does it require installation?","acceptedAnswer":{"@type":"Answer","text":"No. You use it from the browser; you can also add it to your phone like an app (PWA)."}},
+      {"@type":"Question","name":"Do staff get notifications on their phone?","acceptedAnswer":{"@type":"Answer","text":"Yes. Tasks, requests and announcements are sent as push notifications even when the app is closed."}},
+      {"@type":"Question","name":"Can I manage multiple branches?","acceptedAnswer":{"@type":"Answer","text":"Yes. With the location-based structure you manage each branch, chef and staff member separately."}},
+      {"@type":"Question","name":"How are shift and leave changes handled?","acceptedAnswer":{"@type":"Answer","text":"Staff send a request; for swaps the colleague approves first, then the manager or chef. Once approved, the plan updates automatically."}},
+      {"@type":"Question","name":"Which languages are supported?","acceptedAnswer":{"@type":"Answer","text":"Turkish, English, German, Russian, Spanish and Italian — everyone uses it in their own language."}},
+      {"@type":"Question","name":"Is my data safe?","acceptedAnswer":{"@type":"Answer","text":"Passwords are encrypted, each business's data is isolated, and everything is backed up in the cloud."}},
+      {"@type":"Question","name":"Can I set a due time for tasks?","acceptedAnswer":{"@type":"Answer","text":"Yes. You set a due time; one hour before it's due, the assigned staff get an automatic reminder."}}
+    ]
   }
   </script>
   <script src="i18n.js"></script>

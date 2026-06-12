@@ -580,9 +580,16 @@ function scrollActiveTabIntoView() {
 // Giriş yapılmadan önce seçilen dil (misafir dili)
 // Akıllı varsayılan dil: kullanıcı seçtiyse o; yoksa cihaz dili (destekliyorsak); değilse İngilizce
 function guestLang() {
+  const supported = (typeof LANGS !== "undefined") ? LANGS.map(([k]) => k) : ["tr", "en", "de", "ru", "es", "it"];
+  // 1) URL ?hl=xx (hreflang adresleri + paylaşılan linkler için) — varsa öncelikli, kaydedilir
+  try {
+    const hl = (new URLSearchParams(location.search).get("hl") || "").slice(0, 2).toLowerCase();
+    if (hl && supported.includes(hl)) { localStorage.setItem("fixpre_lang", hl); return hl; }
+  } catch (e) { /* yoksay */ }
+  // 2) Kullanıcının daha önce seçtiği dil
   const saved = localStorage.getItem("fixpre_lang");
   if (saved) return saved;
-  const supported = (typeof LANGS !== "undefined") ? LANGS.map(([k]) => k) : ["tr", "en", "de", "ru", "es", "it"];
+  // 3) Cihaz/tarayıcı dili (destekliyorsak)
   const navs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || "en"];
   for (const l of navs) {
     const code = String(l).slice(0, 2).toLowerCase();
@@ -806,6 +813,36 @@ function renderLogin() {
     ["👤", "Personel", "Görevlerini ve haftalık vardiyasını görür; izin, mesai ve vardiya değişikliği talebi gönderir."],
   ];
   const sectors = ["Restoran", "Kafe", "Market", "Otel", "Mağaza", "Kuaför & Berber", "Fırın & Pastane", "Bar & Cafe", "Eczane", "Spor Salonu", "Şube Zinciri", "Üretim & Atölye"];
+  // Özellik vitrini (gerçek ekran görüntüleriyle) — görseller shots/ klasörüne eklenince otomatik görünür
+  const shots = [
+    ["⏰", "Son görev saati & uyarı", "Göreve son saat koyun; bitmesine 1 saat kala ilgili personele otomatik bildirim gider.", "son-saat.svg"],
+    ["🔁", "Belirli günlerde tekrar", "Günlük, haftalık (seçili günler) veya aylık (seçili tarihler) tekrarlayan görevler.", "tekrar.svg"],
+    ["📲", "Anlık bildirimler", "Görev, talep ve duyurular; uygulama kapalıyken bile telefona bildirim olarak düşer.", "bildirim.svg"],
+    ["🏖️", "İzin & mesai talebi", "Personel talep eder, yönetici veya şef onaylar; mesai bakiyesi otomatik hesaplanır.", "izin.svg"],
+    ["📅", "Haftalık vardiya & takas", "Vardiya planı (A/B/C saatleri), vardiya ve izin değişikliği/takas talepleri.", "vardiya.svg"],
+    ["👑", "Hiyerarşik düzen", "Yönetici → Şef → Personel; lokasyon bazlı yetki ve onay kontrolü tamamen sizde.", "hiyerarsi.svg"],
+  ];
+  const steps = [
+    ["1", "Kaydolun", "Yönetici olarak ücretsiz hesap açın — saniyeler içinde, kurulum yok."],
+    ["2", "Ekip & lokasyon ekleyin", "Lokasyonları, şefleri ve personeli ekleyin; yetkileri siz belirleyin."],
+    ["3", "Görev & vardiya atayın", "Görevleri, son saatleri ve haftalık vardiyaları tanımlayın."],
+    ["4", "Anlık takip edin", "Tamamlanma, gecikme, izin ve performansı tek ekrandan izleyin."],
+  ];
+  const reviews = [
+    ["Ayşe K.", "Kafe işletmecisi", "Excel ve WhatsApp karmaşası bitti. Sabah görevleri atıyorum, kim yaptı kim yapmadı anında görüyorum."],
+    ["Mehmet D.", "Restoran müdürü", "Vardiya ve izin için sürekli telefon trafiği vardı; artık her şey uygulamada, onaylıyorum bitiyor."],
+    ["Elif T.", "Market zinciri", "Çok şubemiz var; her lokasyonu ayrı yönetebiliyorum. Arayüz çok basit, personel hemen alıştı."],
+  ];
+  const faqs = [
+    ["Fixpre ücretsiz mi?", "Evet, demo sürümüyle tüm özellikleri ücretsiz kullanabilirsiniz. Ücretli paketler çok yakında."],
+    ["Kurulum gerekiyor mu?", "Hayır. Tarayıcıdan girersiniz; isterseniz telefonunuza uygulama gibi ekleyebilirsiniz (PWA)."],
+    ["Personelin telefonuna bildirim gider mi?", "Evet. Görev, talep ve duyurular; uygulama kapalıyken bile anlık bildirim olarak gider."],
+    ["Birden fazla şubem var, yönetebilir miyim?", "Evet. Lokasyon bazlı düzen sayesinde her şubeyi, şefi ve personeli ayrı yönetirsiniz."],
+    ["Vardiya ve izin değişikliğini nasıl yönetiyorum?", "Personel talep gönderir; takasta önce karşı personel, sonra yönetici/şef onaylar. Onaylanınca plan otomatik güncellenir."],
+    ["Hangi dilleri destekliyor?", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca ve İtalyanca — herkes kendi dilinde kullanır."],
+    ["Verilerim güvende mi?", "Şifreler şifrelenir, her işletmenin verisi birbirinden izoledir ve bulutta yedeklenir."],
+    ["Görevlere son saat koyabilir miyim?", "Evet. Son saat belirlersiniz; bitmesine 1 saat kala ilgili personele otomatik uyarı gider."],
+  ];
   app.innerHTML = `
     <div class="landing">
       <header class="lp-nav">
@@ -828,6 +865,29 @@ function renderLogin() {
           <div class="lp-card lp-c-${c}"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
       </section>
 
+      <section class="lp-shots">
+        <h2>Basit arayüz, çok çözüm</h2>
+        <p class="lp-lead">Kullanıcı dostu tek ekranla işletmenizin neredeyse her ihtiyacına cevap verir. Öne çıkan özellikler:</p>
+        <div class="lp-shots-grid">
+          ${shots.map(([ic, ttl, d, img]) => `
+            <div class="lp-shot">
+              <div class="lp-shot-img">
+                <img src="shots/${img}" alt="${ttl}" loading="lazy" onerror="this.closest('.lp-shot-img').classList.add('noimg')" />
+                <span class="lp-shot-ph">${ic}</span>
+              </div>
+              <h3>${ic} ${ttl}</h3><p>${d}</p>
+            </div>`).join("")}
+        </div>
+      </section>
+
+      <section class="lp-how">
+        <h2>Nasıl çalışır?</h2>
+        <p class="lp-lead">4 adımda başlayın — teknik bilgi gerekmez.</p>
+        <div class="lp-steps">
+          ${steps.map(([n, ttl, d]) => `<div class="lp-step"><div class="lp-step-n">${n}</div><h3>${ttl}</h3><p>${d}</p></div>`).join("")}
+        </div>
+      </section>
+
       <section class="lp-roles">
         <h2>Kendi hiyerarşik düzeninizi kurun</h2>
         <p class="lp-lead">Yönetici en üstte; şefler lokasyonları ve ekipleri yönetir; personel kendi görev ve vardiyasını görür. Onay ve görüntüleme yetkilerini tamamen siz belirlersiniz.</p>
@@ -842,6 +902,19 @@ function renderLogin() {
         <h2>Her işletme için uygun</h2>
         <p class="lp-lead">Tek şube ya da çok şubeli zincir — Fixpre işletmenizle birlikte büyür.</p>
         <div class="lp-chips">${sectors.map((s) => `<span class="lp-chip">${s}</span>`).join("")}</div>
+      </section>
+
+      <section class="lp-reviews">
+        <h2>Kullananlar ne diyor?</h2>
+        <div class="lp-reviews-grid">
+          ${reviews.map(([n, role, txt]) => `
+            <div class="lp-review">
+              <div class="lp-stars">★★★★★</div>
+              <p>"${txt}"</p>
+              <div class="lp-review-who"><strong>${esc(n)}</strong> · ${role}</div>
+            </div>`).join("")}
+        </div>
+        <p class="lp-lead lp-trust">🔒 Şifreler şifreli · 🏢 Her işletmenin verisi izole · ☁️ Bulutta yedekli</p>
       </section>
 
       <section class="lp-plans">
@@ -866,6 +939,11 @@ function renderLogin() {
           <div class="error-msg" id="loginErr"></div>
         </div>
       </div>
+
+      <section class="lp-faq">
+        <h2>Sıkça Sorulan Sorular</h2>
+        ${faqs.map(([q, a]) => `<details class="lp-faq-item"><summary>${q}</summary><div class="lp-faq-a">${a}</div></details>`).join("")}
+      </section>
 
       <section class="lp-seo">
         <h2>Personel takip ve vardiya programı</h2>

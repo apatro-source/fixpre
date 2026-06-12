@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <rect width="400" height="250" fill="#f8fafc"/>
+  <!-- connector line -->
+  <line x1="200" y1="60" x2="200" y2="208" stroke="#cbd5e1" stroke-width="2"/>
+  <!-- Manager -->
+  <rect x="96" y="24" width="208" height="52" rx="13" fill="#6366f1"/>
+  <text x="120" y="48" font-size="18">👑</text>
+  <text x="146" y="46" font-size="15" font-weight="700" fill="#ffffff">Manager</text>
+  <text x="146" y="64" font-size="11" fill="#dbeafe">Owns locations &amp; permissions</text>
+  <!-- Chef -->
+  <rect x="96" y="98" width="208" height="52" rx="13" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="120" y="122" font-size="18">👔</text>
+  <text x="146" y="120" font-size="15" font-weight="700" fill="#1e293b">Chef</text>
+  <text x="146" y="138" font-size="11" fill="#64748b">Runs one location &amp; its team</text>
+  <!-- Staff -->
+  <rect x="96" y="172" width="208" height="52" rx="13" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="120" y="196" font-size="18">👤</text>
+  <text x="146" y="194" font-size="15" font-weight="700" fill="#1e293b">Staff</text>
+  <text x="146" y="212" font-size="11" fill="#64748b">Sees own tasks &amp; shifts</text>
+  <!-- arrows -->
+  <text x="200" y="92" font-size="13" fill="#94a3b8" text-anchor="middle">▼</text>
+  <text x="200" y="166" font-size="13" fill="#94a3b8" text-anchor="middle">▼</text>
+</svg>

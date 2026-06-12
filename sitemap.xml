@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://fixpre.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://fixpre.com/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://fixpre.com/?hl=en" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://fixpre.com/?hl=tr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://fixpre.com/?hl=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://fixpre.com/?hl=ru" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://fixpre.com/?hl=es" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://fixpre.com/?hl=it" />
   </url>
 </urlset>

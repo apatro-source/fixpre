@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <rect width="400" height="250" fill="#f8fafc"/>
+  <rect x="22" y="20" width="356" height="210" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="38" y="48" font-size="15" font-weight="700" fill="#1e293b">📅 Weekly shifts</text>
+  <!-- Day headers -->
+  <g font-size="10" font-weight="700" fill="#94a3b8" text-anchor="middle">
+    <text x="111" y="72">Mon</text><text x="149" y="72">Tue</text><text x="187" y="72">Wed</text>
+    <text x="225" y="72">Thu</text><text x="263" y="72">Fri</text><text x="301" y="72">Sat</text><text x="339" y="72">Sun</text>
+  </g>
+  <!-- Row names -->
+  <g font-size="12" font-weight="700" fill="#334155">
+    <text x="38" y="98">Ayla</text><text x="38" y="136">John</text><text x="38" y="174">Sara</text>
+  </g>
+  <!-- Cells -->
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <!-- Row Ayla: A A B Off A B Off -->
+    <rect x="94"  y="82" width="34" height="26" rx="7" fill="#eef2ff"/><text x="111" y="99" fill="#6366f1">A</text>
+    <rect x="132" y="82" width="34" height="26" rx="7" fill="#eef2ff"/><text x="149" y="99" fill="#6366f1">A</text>
+    <rect x="170" y="82" width="34" height="26" rx="7" fill="#fce7f3"/><text x="187" y="99" fill="#db2777">B</text>
+    <rect x="208" y="82" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="225" y="99" fill="#94a3b8" font-size="9">Off</text>
+    <rect x="246" y="82" width="34" height="26" rx="7" fill="#eef2ff"/><text x="263" y="99" fill="#6366f1">A</text>
+    <rect x="284" y="82" width="34" height="26" rx="7" fill="#fce7f3"/><text x="301" y="99" fill="#db2777">B</text>
+    <rect x="322" y="82" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="339" y="99" fill="#94a3b8" font-size="9">Off</text>
+    <!-- Row John: B Off A A B Off A -->
+    <rect x="94"  y="120" width="34" height="26" rx="7" fill="#fce7f3"/><text x="111" y="137" fill="#db2777">B</text>
+    <rect x="132" y="120" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="149" y="137" fill="#94a3b8" font-size="9">Off</text>
+    <rect x="170" y="120" width="34" height="26" rx="7" fill="#eef2ff"/><text x="187" y="137" fill="#6366f1">A</text>
+    <rect x="208" y="120" width="34" height="26" rx="7" fill="#eef2ff"/><text x="225" y="137" fill="#6366f1">A</text>
+    <rect x="246" y="120" width="34" height="26" rx="7" fill="#fce7f3"/><text x="263" y="137" fill="#db2777">B</text>
+    <rect x="284" y="120" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="301" y="137" fill="#94a3b8" font-size="9">Off</text>
+    <rect x="322" y="120" width="34" height="26" rx="7" fill="#eef2ff"/><text x="339" y="137" fill="#6366f1">A</text>
+    <!-- Row Sara: Off A A B A B Off -->
+    <rect x="94"  y="158" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="111" y="175" fill="#94a3b8" font-size="9">Off</text>
+    <rect x="132" y="158" width="34" height="26" rx="7" fill="#eef2ff"/><text x="149" y="175" fill="#6366f1">A</text>
+    <rect x="170" y="158" width="34" height="26" rx="7" fill="#eef2ff"/><text x="187" y="175" fill="#6366f1">A</text>
+    <rect x="208" y="158" width="34" height="26" rx="7" fill="#fce7f3"/><text x="225" y="175" fill="#db2777">B</text>
+    <rect x="246" y="158" width="34" height="26" rx="7" fill="#eef2ff"/><text x="263" y="175" fill="#6366f1">A</text>
+    <rect x="284" y="158" width="34" height="26" rx="7" fill="#fce7f3"/><text x="301" y="175" fill="#db2777">B</text>
+    <rect x="322" y="158" width="34" height="26" rx="7" fill="#f1f5f9"/><text x="339" y="175" fill="#94a3b8" font-size="9">Off</text>
+  </g>
+  <!-- Swap note -->
+  <rect x="38" y="196" width="240" height="22" rx="11" fill="#fff7ed"/>
+  <text x="50" y="211" font-size="11" font-weight="700" fill="#ea580c">🔄 Swap request: John ⇄ Sara (Fri)</text>
+</svg>
