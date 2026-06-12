@@ -1921,6 +1921,25 @@ function venueCategories(u, tasks) {
   return venueCats + (noVenue.length ? cat("📋 Mekansız", noVenue) : "");
 }
 
+// Kişileri (personel/şef) lokasyona göre açılır gruplara böl. renderItem(p) -> kart HTML'i.
+// Birden çok lokasyondaki kişi her lokasyonda görünür; lokasyonsuzlar ayrı grupta.
+function venuePeopleGroups(u, people, renderItem, noVenueLabel) {
+  if (!people.length) return `<div class="empty">Kişi yok.</div>`;
+  const cat = (title, items) => `
+    <details class="cat" style="margin-bottom:10px">
+      <summary><span>${title}</span><span class="cat-count">${items.length}</span></summary>
+      <div class="cat-body" style="padding:10px 12px">${items.map(renderItem).join("")}</div>
+    </details>`;
+  let html = visibleVenues(u)
+    .map((v) => ({ v, items: people.filter((p) => (p.venueIds || []).includes(v.id)) }))
+    .filter((g) => g.items.length)
+    .map((g) => cat(`📍 ${esc(g.v.name)}`, g.items))
+    .join("");
+  const noV = people.filter((p) => !(p.venueIds || []).some((id) => venueById(id)));
+  if (noV.length) html += cat(noVenueLabel || "📋 Lokasyonsuz", noV);
+  return html;
+}
+
 /* --- Görevler sekmesi --- */
 function mgrTasks(u) {
   const candidates = assignableUsers(u);
@@ -2195,13 +2214,11 @@ function mgrStaff(u) {
 
   const formCard = isEditing ? staffEditForm(editing, venues) : staffAddForm(venues);
 
-  return formCard + `
-    <div class="section-title">Personel Listesi (${staff.length})</div>
-    ${staff.length ? staff.map((s) => {
-      const vNames = (s.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
-      const chef = s.chefId ? userById(s.chefId) : null;
-      const chefInfo = (u.role === "yonetici" && chef) ? ` · 👔 ${esc(chef.name)}` : "";
-      return `<div class="list-item">
+  const staffItem = (s) => {
+    const vNames = (s.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
+    const chef = s.chefId ? userById(s.chefId) : null;
+    const chefInfo = (u.role === "yonetici" && chef) ? ` · 👔 ${esc(chef.name)}` : "";
+    return `<div class="list-item">
         <div>
           <div class="title">${esc(s.name)}</div>
           <div class="meta">${esc(s.email)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""}${chefInfo}</div>
@@ -2211,7 +2228,10 @@ function mgrStaff(u) {
           <button class="btn-danger" data-del-staff="${s.id}">Sil</button>
         </div>
       </div>`;
-    }).join("") : `<div class="empty">Henüz personel yok.</div>`}
+  };
+  return formCard + `
+    <div class="section-title">Personel Listesi (${staff.length})</div>
+    ${staff.length ? venuePeopleGroups(u, staff, staffItem, "📋 Lokasyonsuz personel") : `<div class="empty">Henüz personel yok.</div>`}
   `;
 }
 
@@ -2522,13 +2542,10 @@ function mgrChefs(u) {
   const isEditing = editing && editing.role === "sef" && editing.ownerId === owner;
   const formCard = isEditing ? chefEditForm(editing, venues) : chefAddForm(venues);
 
-  return formCard + `
-    <div class="section-title">Şefler (${chefs.length})</div>
-    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Personelini ve görevlerini görmek için bir şefe tıklayın.</p>
-    ${chefs.length ? chefs.map((c) => {
-      const vNames = (c.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
-      const pc = orgStaff(owner).filter((s) => s.chefId === c.id).length;
-      return `<div class="list-item venue-item" data-open-chef="${c.id}">
+  const chefItem = (c) => {
+    const vNames = (c.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
+    const pc = orgStaff(owner).filter((s) => s.chefId === c.id).length;
+    return `<div class="list-item venue-item" data-open-chef="${c.id}">
         <div>
           <div class="title">👔 ${esc(c.name)}</div>
           <div class="meta">${esc(c.email)}${vNames.length ? " · 📍 " + vNames.map(esc).join(", ") : ""} · ${pc} personel</div>
@@ -2538,7 +2555,11 @@ function mgrChefs(u) {
           <button class="btn-danger" data-del-chef="${c.id}">Sil</button>
         </div>
       </div>`;
-    }).join("") : `<div class="empty">Henüz şef yok.</div>`}
+  };
+  return formCard + `
+    <div class="section-title">Şefler (${chefs.length})</div>
+    <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Personelini ve görevlerini görmek için bir şefe tıklayın.</p>
+    ${chefs.length ? venuePeopleGroups(u, chefs, chefItem, "📋 Lokasyonsuz şef") : `<div class="empty">Henüz şef yok.</div>`}
   `;
 }
 
@@ -3000,7 +3021,7 @@ function leavesView(u) {
   if (u.role === "yonetici") {
     const pending = orgLeaves(owner).filter((l) => l.status === "beklemede").sort(byDate);
     const people = [...orgChefs(owner), ...orgStaff(owner)];
-    const balanceRows = people.length ? people.map((p) => {
+    const personLeaveItem = (p) => {
       const hist = orgLeaves(owner).filter((l) => l.createdBy === p.id).sort(byDate);
       const histHtml = hist.length
         ? hist.map((l) => leaveHistLine(l)).join("")
@@ -3013,13 +3034,13 @@ function leavesView(u) {
         </summary>
         <div class="pl-body">${histHtml}</div>
       </details>`;
-    }).join("") : `<div class="empty">Kişi yok.</div>`;
+    };
     return `
       <div class="section-title">Bekleyen Talepler (${pending.length})</div>
       ${pending.length ? pending.map((l) => leaveCard(u, l, true)).join("") : `<div class="empty">Bekleyen talep yok. 🎉</div>`}
       <div class="section-title">Mesai Durumu (Eksik / Fazla)</div>
-      <p style="color:var(--muted);font-size:13px;margin:-8px 0 12px">🟢 Fazla & Telafi = alacak · 🔴 İzin & Geç gelme & Eksik = borç · (1 gün = ${WORKDAY_HOURS} saat). Sadece onaylanan talepler sayılır.</p>
-      ${balanceRows}
+      <p style="color:var(--muted);font-size:13px;margin:-8px 0 12px">🟢 Fazla & Telafi = alacak · 🔴 İzin & Geç gelme & Eksik = borç · (1 gün = ${WORKDAY_HOURS} saat). Lokasyona göre gruplu.</p>
+      ${venuePeopleGroups(u, people, personLeaveItem, "📋 Lokasyonsuz")}
     `;
   }
 
