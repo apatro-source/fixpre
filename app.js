@@ -598,6 +598,24 @@ function guestLang() {
   return "en";   // desteklemediğimiz dil → İngilizce
 }
 
+// PWA "Ana ekrana ekle": Android/Chrome kurulum istemini yakala (modül başında bir kez)
+let deferredInstallPrompt = null;
+function isStandaloneApp() {
+  try { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; } catch (e) { return false; }
+}
+function isIOSDevice() { return /iphone|ipad|ipod/i.test(navigator.userAgent || ""); }
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const b = document.getElementById("installBtn");
+  if (b) b.style.display = "";
+});
+window.addEventListener("appinstalled", function () {
+  deferredInstallPrompt = null;
+  const s = document.getElementById("lp-install");
+  if (s) s.style.display = "none";
+});
+
 // Aktif dil
 function activeLang() {
   const u = currentUser();
@@ -860,6 +878,18 @@ function renderLogin() {
         <div class="domain">fixpre.com</div>
       </section>
 
+      <section class="lp-install" id="lp-install">
+        <div class="lp-install-card">
+          <div class="lp-install-ic">📲</div>
+          <div class="lp-install-txt">
+            <h3>Telefonuna uygulama gibi kur</h3>
+            <p>Tarayıcı çubuğu olmadan, tam ekran. Birkaç saniye sürer.</p>
+          </div>
+          <button class="btn-primary" id="installBtn">📲 Ana ekrana ekle</button>
+        </div>
+        <p class="lp-install-tip" id="installTip"></p>
+      </section>
+
       <section class="lp-features">
         ${features.map(([ic, t, d, c]) => `
           <div class="lp-card lp-c-${c}"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
@@ -958,6 +988,36 @@ function renderLogin() {
     localStorage.setItem("fixpre_lang", e.target.value);
     render();
   };
+
+  // "Ana ekrana ekle" bölümü — kuruluysa gizle; değilse butonu cihaza göre çalıştır
+  const installSec = document.getElementById("lp-install");
+  if (installSec) {
+    if (isStandaloneApp()) {
+      installSec.style.display = "none";
+    } else {
+      const ios = isIOSDevice();
+      const tip = document.getElementById("installTip");
+      const btn = document.getElementById("installBtn");
+      if (tip) {
+        tip.textContent = ios
+          ? t('iPhone: Safari\'de alttaki Paylaş düğmesine dokun, sonra "Ana Ekrana Ekle"yi seç.')
+          : t('Butona dokun ve "Ekle"yi onayla. Görünmezse tarayıcı menüsünden (⋮) "Ana ekrana ekle" de.');
+      }
+      // beforeinstallprompt henüz gelmediyse butonu yine gösteriyoruz (yönerge için)
+      if (btn) {
+        btn.onclick = async () => {
+          if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            try { await deferredInstallPrompt.userChoice; } catch (e2) {}
+            deferredInstallPrompt = null;
+          } else if (tip) {
+            tip.classList.add("show");
+            tip.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        };
+      }
+    }
+  }
 
   // Üst bar: aşağı kayınca hafif cam efekti
   const lpNav = app.querySelector(".lp-nav");

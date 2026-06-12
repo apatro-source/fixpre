@@ -278,6 +278,21 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .lp-faq-item[open] > summary::after { content: "−"; }
 .lp-faq-a { padding: 0 18px 16px; color: var(--muted); font-size: 14px; line-height: 1.55; }
 
+/* ---- "Ana ekrana ekle" (PWA kurulum) ---- */
+.lp-install { margin: 6px 0 30px; }
+.lp-install-card { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, #eef2ff, #fce7f3); border: 1px solid var(--border); border-radius: 18px; padding: 16px 20px; box-shadow: var(--shadow); }
+.lp-install-ic { font-size: 32px; line-height: 1; }
+.lp-install-txt { flex: 1; min-width: 0; }
+.lp-install-txt h3 { font-size: 16px; margin-bottom: 2px; }
+.lp-install-txt p { font-size: 13px; color: var(--muted); margin: 0; }
+.lp-install-card #installBtn { white-space: nowrap; flex-shrink: 0; }
+.lp-install-tip { text-align: center; font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+.lp-install-tip.show { color: var(--primary); font-weight: 600; }
+@media (max-width: 560px) {
+  .lp-install-card { flex-direction: column; text-align: center; }
+  .lp-install-card #installBtn { width: 100%; }
+}
+
 @media (max-width: 860px) {
   .lp-shots-grid, .lp-reviews-grid { grid-template-columns: repeat(2, 1fr); }
   .lp-steps { grid-template-columns: repeat(2, 1fr); }
