@@ -1732,8 +1732,9 @@ function shiftView(u) {
       </div>`).join("") : `<div class="empty" style="padding:12px">Bu lokasyonda kişi yok.</div>`;
     return `<div class="shift-grid">${head}${rows}</div>`;
   };
-  // Lokasyonlara göre kategori (açılır)
-  const vlist = isMgr ? orgVenues(owner) : visibleVenues(u);
+  // Lokasyonlara göre kategori (açılır) — yönetici dışındakiler YALNIZCA kendi lokasyon(lar)ını görür
+  const myVenueIds = u.venueIds || [];
+  const vlist = isMgr ? orgVenues(owner) : orgVenues(owner).filter((v) => myVenueIds.includes(v.id));
   const groupsHtml = vlist.map((v) => {
     const ppl = people.filter((p) => (p.venueIds || []).includes(v.id));
     return `<details class="cat" open style="margin-bottom:12px">
@@ -1745,7 +1746,12 @@ function shiftView(u) {
   const noVenueHtml = noVenue.length
     ? `<details class="cat" style="margin-bottom:12px"><summary><span>📍 Lokasyonsuz (${noVenue.length})</span></summary><div class="cat-body" style="padding:10px">${gridFor(noVenue)}</div></details>`
     : "";
-  const gridSection = vlist.length ? (groupsHtml + noVenueHtml) : gridFor(people);
+  // Lokasyonu olmayan personel TÜM org'a düşmesin: yalnızca kendi satırını görsün (sızıntı engeli)
+  const gridSection = vlist.length
+    ? (groupsHtml + noVenueHtml)
+    : (isMgr
+        ? gridFor(people)
+        : gridFor(people.filter((p) => (p.venueIds || []).some((v) => myVenueIds.includes(v)) || p.id === u.id)));
 
   // Açıklama (legend) — tanımlı vardiyalar + saatleri
   const defs = orgShiftDefs(owner);
