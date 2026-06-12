@@ -1105,7 +1105,11 @@ function renderManager(u) {
   else if (activeTab === "kayitlar") wireRange("log", (v) => logFrom = v, (v) => logTo = v);
   else if (activeTab === "bildirim") wireReports(u);
   else if (activeTab === "izin") wireLeaves(u);
-  else if (activeTab === "performans") wireRange("perf", (v) => perfFrom = v, (v) => perfTo = v);
+  else if (activeTab === "performans") {
+    wireRange("perf", (v) => perfFrom = v, (v) => perfTo = v);
+    const pb = document.getElementById("perf_pdf");
+    if (pb) pb.onclick = () => window.print();
+  }
   else if (activeTab === "vardiya") wireShift(u);
   else if (activeTab === "paketler") wirePackages(u);
   else if (activeTab === "leads") wireLeadsView(u);
@@ -1867,17 +1871,12 @@ function colleagueDecide(id, ok, u) {
   render();
 }
 
-function perfView(u) {
-  const owner = ownerIdOf(u);
-  const data = performanceData(owner, perfFrom, perfTo)
-    .sort((a, b) => b.s.completed - a.s.completed);
-
-  const rows = data.length ? data.map((r) => {
-    const s = r.s;
-    const vNames = (r.user.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
-    const pct = s.completed ? Math.round((s.onTime / s.completed) * 100) : null;
-    const pctCls = pct === null ? "bal-zero" : (pct >= 80 ? "bal-green" : pct >= 50 ? "bal-amber" : "bal-red");
-    return `<tr>
+function perfRow(r) {
+  const s = r.s;
+  const vNames = (r.user.venueIds || []).map((id) => { const v = venueById(id); return v ? v.name : null; }).filter(Boolean);
+  const pct = s.completed ? Math.round((s.onTime / s.completed) * 100) : null;
+  const pctCls = pct === null ? "bal-zero" : (pct >= 80 ? "bal-green" : pct >= 50 ? "bal-amber" : "bal-red");
+  return `<tr>
       <td>${roleIcon(r.user)} ${esc(r.user.name)}</td>
       <td>${vNames.length ? esc(vNames.join(", ")) : "—"}</td>
       <td><strong>${s.completed}</strong></td>
@@ -1886,18 +1885,47 @@ function perfView(u) {
       <td style="color:#b91c1c;font-weight:700">${s.missed}</td>
       <td>${pct === null ? "—" : `<span class="bal ${pctCls}">%${pct}</span>`}</td>
     </tr>`;
-  }).join("") : `<tr><td colspan="7" class="empty">Henüz kişi yok.</td></tr>`;
+}
+function perfTableHtml(items) {
+  const rows = items.length ? items.map(perfRow).join("") : `<tr><td colspan="7" class="empty">Kişi yok.</td></tr>`;
+  return `<div style="overflow-x:auto"><table>
+    <thead><tr><th>Kişi</th><th>Mekan</th><th>Tamamladığı</th><th>Zamanında</th><th>Geç</th><th>Geciken</th><th>Zamanında %</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function perfView(u) {
+  const owner = ownerIdOf(u);
+  const data = performanceData(owner, perfFrom, perfTo).sort((a, b) => b.s.completed - a.s.completed);
+  const groups = visibleVenues(u)
+    .map((v) => ({ v, items: data.filter((r) => (r.user.venueIds || []).includes(v.id)) }))
+    .filter((g) => g.items.length);
+  const noV = data.filter((r) => !(r.user.venueIds || []).some((id) => venueById(id)));
+
+  // Ekran: lokasyona göre açılır gruplar
+  const screen = (groups.map((g) => `
+    <details class="cat" style="margin-bottom:10px">
+      <summary><span>📍 ${esc(g.v.name)}</span><span class="cat-count">${g.items.length}</span></summary>
+      <div class="cat-body" style="padding:8px">${perfTableHtml(g.items)}</div>
+    </details>`).join("")
+    + (noV.length ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz</span><span class="cat-count">${noV.length}</span></summary><div class="cat-body" style="padding:8px">${perfTableHtml(noV)}</div></details>` : ""))
+    || `<div class="empty">Henüz kişi yok.</div>`;
+
+  // Yazdırma/PDF: düz (tümü açık) rapor
+  const printSections = groups.map((g) => `<h3 style="margin:14px 0 6px">📍 ${esc(g.v.name)}</h3>${perfTableHtml(g.items)}`).join("")
+    + (noV.length ? `<h3 style="margin:14px 0 6px">📋 Lokasyonsuz</h3>${perfTableHtml(noV)}` : "");
+  const rangeText = (perfFrom || perfTo) ? `${perfFrom || "…"} – ${perfTo || "…"}` : "Tüm zamanlar";
 
   return rangeFilter("perf", perfFrom, perfTo) + `
-    <div class="card">
+    <div class="card no-print">
       <h2>📊 Personel Performansı</h2>
       <p style="color:var(--muted);font-size:13px;margin:-8px 0 14px">Açıklama: Tamamladığı = kişinin bizzat tamamladığı görev sayısı; Zamanında = gününde veya erken yapılan; Geç = sonradan yapılan; Geciken = ekipçe hiç yapılmamış (sorumlu olduğu); % = zamanında oranı.</p>
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Kişi</th><th>Mekan</th><th>Tamamladığı</th><th>Zamanında</th><th>Geç</th><th>Geciken</th><th>Zamanında %</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <button class="btn-primary" id="perf_pdf">🖨️ PDF olarak indir</button>
+    </div>
+    <div class="no-print">${screen}</div>
+    <div id="perf-print" class="print-only">
+      <h2>📊 Personel Performansı — Fixpre</h2>
+      <div style="color:#555;margin-bottom:10px">📅 ${rangeText} · ${new Date().toLocaleDateString(currentLocale())}</div>
+      ${printSections || `<div>Henüz kişi yok.</div>`}
     </div>`;
 }
 

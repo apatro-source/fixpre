@@ -425,6 +425,10 @@ const I18N_ROWS = [
   ["📊 Personel Performansı", "📊 Staff Performance", "📊 Personalleistung", "📊 Производительность персонала", "📊 Rendimiento del personal", "📊 Prestazioni del personale"],
   ["Açıklama: Tamamladığı = kişinin bizzat tamamladığı görev sayısı; Zamanında = gününde veya erken yapılan; Geç = sonradan yapılan; Geciken = ekipçe hiç yapılmamış (sorumlu olduğu); % = zamanında oranı.", "Note: Completed = tasks the person did themselves; On time = same day or early; Late = done afterwards; Overdue = not done by anyone on the team (assigned); % = on-time rate.", "Hinweis: Erledigt = vom Mitarbeiter selbst erledigte Aufgaben; Pünktlich = am Tag oder früher; Spät = nachträglich; Überfällig = vom Team gar nicht erledigt (zugewiesen); % = Pünktlichkeitsrate.", "Примечание: Выполнил = задачи, выполненные самим; Вовремя = в тот же день или раньше; Поздно = позже; Просрочено = не сделано всей командой (назначенные); % = доля вовремя.", "Nota: Completó = tareas hechas por la propia persona; A tiempo = el mismo día o antes; Tarde = después; Atrasado = nadie del equipo lo hizo (asignado); % = tasa a tiempo.", "Nota: Completate = attività svolte dalla persona; In orario = stesso giorno o prima; In ritardo = fatte dopo; In ritardo (team) = non fatte da nessuno (assegnate); % = percentuale puntuale."],
   ["Performans", "Performance", "Leistung", "Производительность", "Rendimiento", "Prestazioni"],
+  ["🖨️ PDF olarak indir", "🖨️ Download as PDF", "🖨️ Als PDF herunterladen", "🖨️ Скачать PDF", "🖨️ Descargar PDF", "🖨️ Scarica PDF"],
+  ["Tüm zamanlar", "All time", "Gesamter Zeitraum", "Всё время", "Todo el tiempo", "Sempre"],
+  ["Kişi yok.", "No people.", "Keine Personen.", "Нет людей.", "Sin personas.", "Nessuno."],
+  ["Henüz kişi yok.", "No people yet.", "Noch keine Personen.", "Пока нет людей.", "Aún no hay personas.", "Ancora nessuno."],
 
   // --- Paketler (müşteriye görünür) ---
   ["Paketler", "Plans", "Pakete", "Тарифы", "Planes", "Piani"],

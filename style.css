@@ -670,6 +670,19 @@ button.sh-cell:hover { background: #eef1f8; }
 .sh-cell.shift { background: #eef2ff; }
 .sh-lab { font-size: 14px; font-weight: 800; color: var(--primary); }
 
+/* ---- Yazdırma / PDF (performans raporu) ---- */
+.print-only { display: none; }
+@media print {
+  body { background: #fff !important; }
+  .topbar, .modal-overlay { display: none !important; }
+  .container > *:not(#perf-print) { display: none !important; }   /* sadece raporu yazdır */
+  #perf-print { display: block !important; }
+  #perf-print h2 { font-size: 18px; margin-bottom: 4px; }
+  #perf-print table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  #perf-print th, #perf-print td { border: 1px solid #bbb; padding: 5px 7px; font-size: 12px; text-align: left; }
+  #perf-print .bal { border: none; padding: 0; background: none; }
+}
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 100;
