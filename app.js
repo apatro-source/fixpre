@@ -3690,7 +3690,7 @@ function cloudPush(db) {
     } catch (e) {
       if (e && e.conflict) {
         // Bulutta daha yeni veri var -> ESKİYLE YAZMA. Bulutu benimse (veri kaybını önler).
-        if (e.data) { DB = migrate(e.data); saveLocal(DB); lastAppliedAt = e.updatedAt; render(); }
+        if (e.data) { const _sy = window.scrollY; DB = migrate(e.data); saveLocal(DB); lastAppliedAt = e.updatedAt; render(); requestAnimationFrame(() => window.scrollTo(0, _sy)); }
       }
       /* diğer hatalar: sessiz; localStorage yedeği var */
     }
@@ -3706,8 +3706,10 @@ async function cloudBootstrap() {
       const res = await dataGet();
       if (res && res.plan) orgPlan = res.plan;
       if (res && res.data) {
+        const _sy = window.scrollY;
         DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt;
         render();   // taze veri gelince arka planda yenile
+        requestAnimationFrame(() => window.scrollTo(0, _sy));   // girişte üste atmasın
       }
       cloudReady = true;   // bulut başarıyla okundu -> push güvenli
     } catch (e) {
@@ -3740,10 +3742,12 @@ async function pollOnce() {
       const res = await dataGet();
       if (res && res.plan) orgPlan = res.plan;
       if (res && res.data) {
+        const _sy = window.scrollY;        // arka plan güncellemesi: kullanıcının kaydırma yerini koru
         DB = migrate(res.data);
         saveLocal(DB);
         lastAppliedAt = res.updatedAt;
         render();
+        requestAnimationFrame(() => window.scrollTo(0, _sy));   // üste atmasın
       }
     }
   } catch (e) { /* sessiz */ }
@@ -3752,7 +3756,7 @@ async function pollOnce() {
 function startPolling() {
   if (pollStarted) return;          // birden fazla kez kurulmasın
   pollStarted = true;
-  setInterval(pollOnce, 60000);     // 60 sn (eskiden 20 sn)
+  setInterval(pollOnce, 25000);     // 25 sn — poll artık HAFİF (sürüm kontrolü) olduğu için sık ve ucuz
   // Sekmeye geri dönünce anında tazele
   document.addEventListener("visibilitychange", () => { if (!document.hidden) pollOnce(); });
 }
