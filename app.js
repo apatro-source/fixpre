@@ -3655,6 +3655,13 @@ async function dataGet() {
   if (!r.ok) throw new Error("get " + r.status);
   return r.json();
 }
+// Hafif sürüm kontrolü: sadece {updatedAt, plan} döner (büyük veri blob'u inmez)
+async function dataCheck() {
+  const r = await fetch("/api/data?v=1", { headers: { "Authorization": "Bearer " + authToken() } });
+  if (r.status === 401) throw new Error("401");
+  if (!r.ok) throw new Error("check " + r.status);
+  return r.json();
+}
 async function dataPut(data) {
   const r = await fetch("/api/data", {
     method: "PUT",
@@ -3725,14 +3732,19 @@ async function pollOnce() {
   const ae = document.activeElement;
   if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
   try {
-    const res = await dataGet();
+    const chk = await dataCheck();   // HAFİF: sadece sürüm + plan (veri blob'u inmez)
     cloudReady = true;   // başarılı bulut okuması -> push artık güvenli (açılışta ağ koptuysa kurtarır)
-    if (res && res.plan) orgPlan = res.plan;
-    if (res && res.data && res.updatedAt && res.updatedAt !== lastAppliedAt) {
-      DB = migrate(res.data);
-      saveLocal(DB);
-      lastAppliedAt = res.updatedAt;
-      render();
+    if (chk && chk.plan) orgPlan = chk.plan;
+    if (chk && chk.updatedAt && chk.updatedAt !== lastAppliedAt) {
+      // Yalnızca veri değiştiyse tam blob'u indir
+      const res = await dataGet();
+      if (res && res.plan) orgPlan = res.plan;
+      if (res && res.data) {
+        DB = migrate(res.data);
+        saveLocal(DB);
+        lastAppliedAt = res.updatedAt;
+        render();
+      }
     }
   } catch (e) { /* sessiz */ }
 }

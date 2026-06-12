@@ -45,8 +45,15 @@ module.exports = async (req, res) => {
     await sql`alter table org_plans add column if not exists expires_at timestamptz`;
 
     if (req.method === "GET") {
-      const rows = await sql`select data, (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${claim.org}`;
       const plan = await getPlan(sql, claim.org);
+      // Hafif sürüm kontrolü (?v=1): büyük jsonb'yi OKUMA, yalnızca zaman damgası + plan döndür.
+      // Polling bunu kullanır; veri ancak updatedAt değişince tam indirilir (bant genişliği + Neon tasarrufu).
+      if (req.query && (req.query.v || req.query.check)) {
+        const vr = await sql`select (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${claim.org}`;
+        res.status(200).json({ updatedAt: vr.length ? Number(vr[0].ver) : null, plan });
+        return;
+      }
+      const rows = await sql`select data, (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${claim.org}`;
       res.status(200).json(rows.length
         ? { data: rows[0].data, updatedAt: Number(rows[0].ver), plan }
         : { data: null, updatedAt: null, plan });
