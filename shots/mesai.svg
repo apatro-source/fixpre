@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <rect width="400" height="250" fill="#f8fafc"/>
+  <!-- Overtime request card -->
+  <rect x="24" y="24" width="352" height="112" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <circle cx="54" cy="56" r="16" fill="#eef2ff"/><text x="54" y="61" font-size="14" font-weight="700" fill="#6366f1" text-anchor="middle">M</text>
+  <text x="80" y="52" font-size="15" font-weight="800" fill="#1e1b3a">⏱️ Overtime · Mike</text>
+  <text x="80" y="71" font-size="12" fill="#64748b">Friday · +2 hours</text>
+  <rect x="44" y="96" width="150" height="26" rx="10" fill="#16a34a"/><text x="119" y="113" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">✓ Approve</text>
+  <rect x="206" y="96" width="150" height="26" rx="10" fill="#ffffff" stroke="#e2e8f0"/><text x="281" y="113" font-size="12" font-weight="700" fill="#64748b" text-anchor="middle">✕ Reject</text>
+  <!-- Balance card -->
+  <rect x="24" y="152" width="352" height="72" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="44" y="178" font-size="13" font-weight="700" fill="#1e1b3a">Hours balance — auto calculated</text>
+  <rect x="44" y="190" width="104" height="24" rx="12" fill="#ecfdf5"/><text x="58" y="206" font-size="12" font-weight="700" fill="#16a34a">+2h overtime</text>
+  <rect x="158" y="190" width="98" height="24" rx="12" fill="#fef2f2"/><text x="172" y="206" font-size="12" font-weight="700" fill="#dc2626">−1h missing</text>
+  <rect x="266" y="190" width="90" height="24" rx="12" fill="#eff6ff"/><text x="280" y="206" font-size="12" font-weight="700" fill="#2563eb">Net +1h</text>
+</svg>

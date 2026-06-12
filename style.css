@@ -305,6 +305,96 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
   .lp-features { grid-template-columns: 1fr; }
   .lp-shots-grid, .lp-reviews-grid, .lp-steps { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   PREMIUM LANDING (mor-pembe yeniden tasarım)
+   ============================================================ */
+:root { --lp-ink: #1e1b3a; --lp-grad: linear-gradient(135deg, #6366f1, #ec4899); }
+
+.lp-eyebrow { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .3px;
+  color: #6d28d9; background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.18);
+  padding: 6px 14px; border-radius: 999px; margin-bottom: 16px; }
+
+/* HERO */
+.lp-hero { position: relative; overflow: hidden; padding: 46px 0 30px; text-align: left; }
+.lp-hero::before, .lp-hero::after { content: ""; position: absolute; border-radius: 50%; filter: blur(72px); opacity: .55; z-index: 0; pointer-events: none; }
+.lp-hero::before { width: 340px; height: 340px; background: #c7d2fe; top: -100px; left: -90px; }
+.lp-hero::after { width: 320px; height: 320px; background: #fbcfe8; bottom: -120px; right: -80px; }
+.lp-hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr 1fr; gap: 42px; align-items: center; }
+.lp-hero-txt { text-align: left; }
+.lp-hero-txt h1 { font-size: 42px; line-height: 1.12; font-weight: 800; color: var(--lp-ink); margin: 0 0 16px; letter-spacing: -.5px; }
+.lp-hero-txt .lp-lead { font-size: 18px; color: #475569; margin: 0 0 24px; max-width: 520px; }
+.lp-hero-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.lp-cta-ghost { font-weight: 700; color: #6d28d9; text-decoration: none; padding: 13px 18px; border-radius: 12px; border: 1px solid rgba(124,58,237,.25); transition: background .15s; }
+.lp-cta-ghost:hover { background: rgba(124,58,237,.06); }
+.lp-hero-mini { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 13.5px; font-weight: 600; color: #475569; }
+.lp-hero-mini span { white-space: nowrap; }
+.lp-hero-art img { width: 100%; height: auto; border-radius: 20px; display: block;
+  box-shadow: 0 30px 60px -20px rgba(99,102,241,.45); border: 1px solid rgba(255,255,255,.6); }
+
+/* Premium CTA buton */
+.lp-cta { display: inline-block; padding: 14px 28px; border-radius: 14px; color: #fff; font-weight: 700; text-decoration: none;
+  background: var(--lp-grad); border: none; box-shadow: 0 12px 24px -8px rgba(236,72,153,.5); transition: transform .15s, box-shadow .15s; }
+.lp-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -8px rgba(236,72,153,.6); }
+.lp-cta.lg { font-size: 17px; padding: 15px 32px; }
+
+/* Güven şeridi */
+.lp-trustbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 30px; padding: 18px 16px; margin: 6px 0 38px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+.lp-trust-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #475569; font-weight: 600; }
+.lp-trust-item b { color: #f59e0b; font-size: 14px; }
+
+/* Bölüm başlığı */
+.lp-sec-head { text-align: center; margin-bottom: 30px; }
+.lp-sec-head h2 { font-size: 30px; color: var(--lp-ink); margin: 0; letter-spacing: -.4px; }
+
+/* 4 ÖZELLİK BLOĞU (dönüşümlü) */
+.lp-feats { margin: 12px 0 52px; }
+.lp-feat { display: grid; grid-template-columns: 1fr 1fr; gap: 38px; align-items: center; margin-bottom: 30px; }
+.lp-feat.rev .lp-feat-art { order: 2; }
+.lp-feat-art { position: relative; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #eef2ff, #fce7f3);
+  border: 1px solid var(--border); box-shadow: 0 18px 40px -22px rgba(99,102,241,.4); aspect-ratio: 16/10;
+  display: flex; align-items: center; justify-content: center; transition: transform .18s; }
+.lp-feat-art:hover { transform: translateY(-4px); }
+.lp-feat-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lp-feat-ph { display: none; font-size: 60px; opacity: .5; }
+.lp-feat-art.noimg img { display: none; }
+.lp-feat-art.noimg .lp-feat-ph { display: block; }
+.lp-feat-ic { width: 52px; height: 52px; border-radius: 14px; background: var(--lp-grad); color: #fff; display: flex;
+  align-items: center; justify-content: center; font-size: 26px; margin-bottom: 14px; box-shadow: 0 10px 20px -8px rgba(236,72,153,.5); }
+.lp-feat-txt h3 { font-size: 23px; color: var(--lp-ink); margin: 0 0 10px; letter-spacing: -.3px; }
+.lp-feat-txt p { font-size: 16px; color: #475569; line-height: 1.6; margin: 0; }
+
+/* FINAL CTA BANDI */
+.lp-cta-band { margin: 22px 0 42px; }
+.lp-cta-inner { background: var(--lp-grad); border-radius: 24px; padding: 46px 24px; text-align: center; color: #fff;
+  box-shadow: 0 24px 50px -20px rgba(124,58,237,.6); }
+.lp-cta-inner h2 { color: #fff; font-size: 30px; margin: 0 0 8px; letter-spacing: -.4px; }
+.lp-cta-inner p { color: rgba(255,255,255,.92); font-size: 16px; margin: 0 0 22px; }
+.lp-cta-inner .lp-cta.lg { background: #fff; color: #6d28d9; box-shadow: 0 12px 24px -10px rgba(0,0,0,.35); }
+.lp-cta-inner .lp-cta.lg:hover { background: #fff; }
+.lp-install-link { background: transparent; border: none; color: rgba(255,255,255,.95); font-weight: 700; font-size: 14px;
+  cursor: pointer; margin-top: 16px; text-decoration: underline; padding: 6px; }
+.lp-cta-band .lp-install-tip { color: rgba(255,255,255,.9); }
+.lp-cta-band .lp-install-tip.show { color: #fff; font-weight: 700; }
+
+/* RESPONSIVE (premium) */
+@media (max-width: 880px) {
+  .lp-hero-grid { grid-template-columns: 1fr; gap: 26px; }
+  .lp-hero, .lp-hero-txt { text-align: center; }
+  .lp-hero-txt h1 { font-size: 34px; }
+  .lp-hero-txt .lp-lead { margin-left: auto; margin-right: auto; }
+  .lp-hero-cta, .lp-hero-mini { justify-content: center; }
+  .lp-hero-art { max-width: 460px; margin: 0 auto; }
+  .lp-feat, .lp-feat.rev { grid-template-columns: 1fr; gap: 16px; }
+  .lp-feat.rev .lp-feat-art { order: 0; }
+  .lp-feat-txt { text-align: center; }
+  .lp-feat-ic { margin-left: auto; margin-right: auto; }
+}
+@media (max-width: 560px) {
+  .lp-hero-txt h1 { font-size: 28px; }
+  .lp-sec-head h2, .lp-cta-inner h2, .lp-feat-txt h3 { font-size: 23px; }
+}
 .hint {
   margin-top: 20px; padding: 13px; background: #f4f1ff;
   border: 1px dashed #c7befb; border-radius: 12px; font-size: 12px; color: #5b5276;

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="380" rx="18" fill="#ffffff"/>
+  <!-- Top bar -->
+  <rect x="20" y="14" width="26" height="26" rx="8" fill="url(#g)"/>
+  <text x="33" y="33" font-size="15" text-anchor="middle">✓</text>
+  <text x="56" y="33" font-size="17" font-weight="800" fill="#1e1b3a">Fixpre</text>
+  <rect x="446" y="15" width="94" height="24" rx="12" fill="#eef2ff"/>
+  <text x="493" y="31" font-size="12" font-weight="700" fill="#6366f1" text-anchor="middle">Manager</text>
+  <line x1="0" y1="52" x2="560" y2="52" stroke="#eef2ff" stroke-width="2"/>
+  <!-- Nav chips -->
+  <g font-size="12" font-weight="700">
+    <rect x="20" y="64" width="84" height="26" rx="13" fill="#6366f1"/><text x="62" y="81" fill="#fff" text-anchor="middle">Dashboard</text>
+    <rect x="110" y="64" width="58" height="26" rx="13" fill="#f1f5f9"/><text x="139" y="81" fill="#64748b" text-anchor="middle">Tasks</text>
+    <rect x="174" y="64" width="60" height="26" rx="13" fill="#f1f5f9"/><text x="204" y="81" fill="#64748b" text-anchor="middle">Shifts</text>
+    <rect x="240" y="64" width="60" height="26" rx="13" fill="#f1f5f9"/><text x="270" y="81" fill="#64748b" text-anchor="middle">Leave</text>
+  </g>
+  <!-- Stat cards -->
+  <rect x="20" y="104" width="166" height="72" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="36" y="142" font-size="30" font-weight="800" fill="#6366f1">10</text>
+  <text x="36" y="162" font-size="12" fill="#64748b">Active today</text>
+  <rect x="197" y="104" width="166" height="72" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="213" y="142" font-size="30" font-weight="800" fill="#16a34a">8</text>
+  <text x="213" y="162" font-size="12" fill="#64748b">Completed</text>
+  <rect x="374" y="104" width="166" height="72" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="390" y="142" font-size="30" font-weight="800" fill="#ef4444">2</text>
+  <text x="390" y="162" font-size="12" fill="#64748b">Overdue</text>
+  <!-- Tasks panel -->
+  <rect x="20" y="190" width="330" height="170" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="38" y="216" font-size="14" font-weight="800" fill="#1e1b3a">Today's tasks</text>
+  <g font-size="13">
+    <circle cx="48" cy="244" r="9" fill="#16a34a"/><text x="48" y="248" font-size="10" fill="#fff" text-anchor="middle">✓</text>
+    <text x="66" y="249" fill="#334155">Open the café</text>
+    <rect x="280" y="234" width="54" height="20" rx="10" fill="#dcfce7"/><text x="307" y="248" font-size="11" font-weight="700" fill="#16a34a" text-anchor="middle">Done</text>
+    <circle cx="48" cy="284" r="9" fill="#16a34a"/><text x="48" y="288" font-size="10" fill="#fff" text-anchor="middle">✓</text>
+    <text x="66" y="289" fill="#334155">Clean the machines</text>
+    <rect x="280" y="274" width="54" height="20" rx="10" fill="#dcfce7"/><text x="307" y="288" font-size="11" font-weight="700" fill="#16a34a" text-anchor="middle">Done</text>
+    <circle cx="48" cy="324" r="9" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="66" y="329" fill="#334155">Restock the shelves</text>
+    <rect x="284" y="314" width="50" height="20" rx="10" fill="#fef9c3"/><text x="309" y="328" font-size="11" font-weight="700" fill="#b45309" text-anchor="middle">16:00</text>
+  </g>
+  <!-- Shift mini panel -->
+  <rect x="362" y="190" width="178" height="170" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="380" y="216" font-size="14" font-weight="800" fill="#1e1b3a">This week</text>
+  <g font-size="13" font-weight="700">
+    <text x="380" y="250" fill="#334155">Mon</text><rect x="476" y="236" width="48" height="22" rx="8" fill="#eef2ff"/><text x="500" y="251" fill="#6366f1" text-anchor="middle">A</text>
+    <text x="380" y="288" fill="#334155">Tue</text><rect x="476" y="274" width="48" height="22" rx="8" fill="#fce7f3"/><text x="500" y="289" fill="#db2777" text-anchor="middle">B</text>
+    <text x="380" y="326" fill="#334155">Wed</text><rect x="476" y="312" width="48" height="22" rx="8" fill="#f1f5f9"/><text x="500" y="327" font-size="10" fill="#94a3b8" text-anchor="middle">Off</text>
+  </g>
+</svg>

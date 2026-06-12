@@ -817,28 +817,12 @@ function renderLogin() {
   const gl = guestLang();
   const langSel = LANGS.map(([k, l]) => `<option value="${k}" ${gl === k ? "selected" : ""}>${l}</option>`).join("");
 
-  const features = [
-    ["✅", "Görev Yönetimi", "Personele görev atayın, tekrarlayan görevler kurun, tamamlanmayı anlık takip edin.", "blue"],
-    ["📅", "Haftalık Vardiya", "Vardiya planı oluşturun (A/B/C saatleri), vardiya ve izin değişikliği taleplerini yönetin.", "green"],
-    ["🏖️", "İzin ve Mesai Takibi", "İzin, fazla ve eksik mesai takibi; talepler onaya gider, bakiye otomatik hesaplanır.", "amber"],
-    ["📨", "Talepler ve Duyurular", "Arıza, eksik ve istek bildirimleri; tüm lokasyonlara tek tıkla duyuru.", "pink"],
-    ["👥", "Yönetici, Şef, Personel", "Roller ve lokasyon bazlı yetki; onay yetkisini siz belirleyin.", "purple"],
-    ["🌍", "6 Dil ve Mobil", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca, İtalyanca. Telefona kurulabilir (PWA).", "teal"],
-  ];
-  const roles = [
-    ["👑", "Yönetici", "Lokasyonları, şefleri ve personeli ekler; paketleri, onay yetkilerini ve tüm işletmeyi tek yerden yönetir."],
-    ["👔", "Şef", "Kendi lokasyonundaki ekibi ve görevleri yönetir; izin ve vardiya taleplerini (yetki verilirse) onaylar."],
-    ["👤", "Personel", "Görevlerini ve haftalık vardiyasını görür; izin, mesai ve vardiya değişikliği talebi gönderir."],
-  ];
-  const sectors = ["Restoran", "Kafe", "Market", "Otel", "Mağaza", "Kuaför & Berber", "Fırın & Pastane", "Bar & Cafe", "Eczane", "Spor Salonu", "Şube Zinciri", "Üretim & Atölye"];
-  // Özellik vitrini (gerçek ekran görüntüleriyle) — görseller shots/ klasörüne eklenince otomatik görünür
-  const shots = [
-    ["⏰", "Son görev saati & uyarı", "Göreve son saat koyun; bitmesine 1 saat kala ilgili personele otomatik bildirim gider.", "son-saat.svg"],
-    ["🔁", "Belirli günlerde tekrar", "Günlük, haftalık (seçili günler) veya aylık (seçili tarihler) tekrarlayan görevler.", "tekrar.svg"],
-    ["📲", "Anlık bildirimler", "Görev, talep ve duyurular; uygulama kapalıyken bile telefona bildirim olarak düşer.", "bildirim.svg"],
-    ["🏖️", "İzin & mesai talebi", "Personel talep eder, yönetici veya şef onaylar; mesai bakiyesi otomatik hesaplanır.", "izin.svg"],
-    ["📅", "Haftalık vardiya & takas", "Vardiya planı (A/B/C saatleri), vardiya ve izin değişikliği/takas talepleri.", "vardiya.svg"],
-    ["👑", "Hiyerarşik düzen", "Yönetici → Şef → Personel; lokasyon bazlı yetki ve onay kontrolü tamamen sizde.", "hiyerarsi.svg"],
+  // 4 güçlü özellik — her biri kendi İngilizce mockup görseliyle
+  const feats = [
+    ["✅", "Onaylı Vardiya Değişimi", "Personel takas ister, yönetici onaylar; plan otomatik güncellenir. Telefon trafiği biter.", "vardiya-swap.svg"],
+    ["⏱️", "Onaylı Mesai Takibi", "Eksik veya fazla mesai talebi tek onayla; bakiye otomatik hesaplanır.", "mesai.svg"],
+    ["🔁", "Tekrarlanan Görevler", "Günlük ve haftalık görevleri bir kez kur; her gün kendi kendine düşsün, kim yaptı anında gör.", "tekrar.svg"],
+    ["👑", "Hiyerarşik Düzen", "Yönetici → Şef → Personel; yetki ve görünürlük tamamen sende.", "hiyerarsi.svg"],
   ];
   const steps = [
     ["1", "Kaydolun", "Yönetici olarak ücretsiz hesap açın — saniyeler içinde, kurulum yok."],
@@ -872,42 +856,47 @@ function renderLogin() {
       </header>
 
       <section class="lp-hero">
-        <h1>İşletmeniz için personel görev, vardiya ve izin yönetimi</h1>
-        <p class="lp-lead">Fixpre; kafe, restoran, market ve tüm işletmeler için görev atama, haftalık vardiya planı ve izin/mesai takibini tek uygulamada toplar. Telefondan kullanın, ücretsiz başlayın.</p>
-        <a href="#giris" class="btn-primary lp-cta">Ücretsiz Başla</a>
-        <div class="domain">fixpre.com</div>
-      </section>
-
-      <section class="lp-install" id="lp-install">
-        <div class="lp-install-card">
-          <div class="lp-install-ic">📲</div>
-          <div class="lp-install-txt">
-            <h3>Telefonuna uygulama gibi kur</h3>
-            <p>Tarayıcı çubuğu olmadan, tam ekran. Birkaç saniye sürer.</p>
+        <div class="lp-hero-grid">
+          <div class="lp-hero-txt">
+            <span class="lp-eyebrow">☕ Kafe & Restoranlar için</span>
+            <h1>Personel Takibini Kolaylaştıran Akıllı Sistem</h1>
+            <p class="lp-lead">Mesai, görev, kontrol ve raporlama — tek panelde.</p>
+            <div class="lp-hero-cta">
+              <a href="#giris" class="btn-primary lp-cta">🚀 Ücretsiz Başla</a>
+              <a href="#ozellikler" class="lp-cta-ghost">Nasıl çalışır?</a>
+            </div>
+            <div class="lp-hero-mini"><span>✓ Kurulum yok</span><span>✓ Anlık bildirim</span><span>✓ 6 dil</span></div>
           </div>
-          <button class="btn-primary" id="installBtn">📲 Ana ekrana ekle</button>
+          <div class="lp-hero-art">
+            <img src="shots/dashboard.svg" alt="Fixpre kontrol paneli" loading="eager" />
+          </div>
         </div>
-        <p class="lp-install-tip" id="installTip"></p>
       </section>
 
-      <section class="lp-features">
-        ${features.map(([ic, t, d, c]) => `
-          <div class="lp-card lp-c-${c}"><div class="lp-ic">${ic}</div><h3>${t}</h3><p>${d}</p></div>`).join("")}
+      <section class="lp-trustbar">
+        <div class="lp-trust-item"><b>★★★★★</b><span>Kafe & restoranların tercihi</span></div>
+        <div class="lp-trust-item"><b>📲</b><span>Telefonda tam ekran</span></div>
+        <div class="lp-trust-item"><b>🔔</b><span>App kapalıyken bile bildirim</span></div>
+        <div class="lp-trust-item"><b>🔒</b><span>Verisi izole & yedekli</span></div>
       </section>
 
-      <section class="lp-shots">
-        <h2>Basit arayüz, çok çözüm</h2>
-        <p class="lp-lead">Kullanıcı dostu tek ekranla işletmenizin neredeyse her ihtiyacına cevap verir. Öne çıkan özellikler:</p>
-        <div class="lp-shots-grid">
-          ${shots.map(([ic, ttl, d, img]) => `
-            <div class="lp-shot">
-              <div class="lp-shot-img">
-                <img src="shots/${img}" alt="${ttl}" loading="lazy" onerror="this.closest('.lp-shot-img').classList.add('noimg')" />
-                <span class="lp-shot-ph">${ic}</span>
-              </div>
-              <h3>${ic} ${ttl}</h3><p>${d}</p>
-            </div>`).join("")}
+      <section class="lp-feats" id="ozellikler">
+        <div class="lp-sec-head">
+          <span class="lp-eyebrow">Neden Fixpre?</span>
+          <h2>İşletmeni tek panelden yönet</h2>
         </div>
+        ${feats.map(([ic, ttl, d, img], i) => `
+          <div class="lp-feat ${i % 2 ? "rev" : ""}">
+            <div class="lp-feat-art">
+              <img src="shots/${img}" alt="${ttl}" loading="lazy" onerror="this.closest('.lp-feat-art').classList.add('noimg')" />
+              <span class="lp-feat-ph">${ic}</span>
+            </div>
+            <div class="lp-feat-txt">
+              <div class="lp-feat-ic">${ic}</div>
+              <h3>${ttl}</h3>
+              <p>${d}</p>
+            </div>
+          </div>`).join("")}
       </section>
 
       <section class="lp-how">
@@ -916,22 +905,6 @@ function renderLogin() {
         <div class="lp-steps">
           ${steps.map(([n, ttl, d]) => `<div class="lp-step"><div class="lp-step-n">${n}</div><h3>${ttl}</h3><p>${d}</p></div>`).join("")}
         </div>
-      </section>
-
-      <section class="lp-roles">
-        <h2>Kendi hiyerarşik düzeninizi kurun</h2>
-        <p class="lp-lead">Yönetici en üstte; şefler lokasyonları ve ekipleri yönetir; personel kendi görev ve vardiyasını görür. Onay ve görüntüleme yetkilerini tamamen siz belirlersiniz.</p>
-        <div class="lp-roles-grid">
-          ${roles.map(([ic, t, d], i) => `
-            ${i ? `<div class="lp-arrow">→</div>` : ""}
-            <div class="lp-role"><div class="lp-role-ic">${ic}</div><div><h3>${t}</h3><p>${d}</p></div></div>`).join("")}
-        </div>
-      </section>
-
-      <section class="lp-sectors">
-        <h2>Her işletme için uygun</h2>
-        <p class="lp-lead">Tek şube ya da çok şubeli zincir — Fixpre işletmenizle birlikte büyür.</p>
-        <div class="lp-chips">${sectors.map((s) => `<span class="lp-chip">${s}</span>`).join("")}</div>
       </section>
 
       <section class="lp-reviews">
@@ -947,12 +920,15 @@ function renderLogin() {
         <p class="lp-lead lp-trust">🔒 Şifreler şifreli · 🏢 Her işletmenin verisi izole · ☁️ Bulutta yedekli</p>
       </section>
 
-      <section class="lp-plans">
-        <div class="lp-soon">
-          <div style="font-size:38px">🚀</div>
-          <h2>Paketlerimiz çok yakında!</h2>
-          <p class="lp-lead">Şimdilik tüm özellikler <strong>demo sürümde ücretsiz</strong>. Ücretli paketler yakında — o zamana kadar Fixpre'yi keşfedin.</p>
-          <a href="#giris" class="btn-primary lp-cta">Demoyu Ücretsiz Dene</a>
+      <section class="lp-cta-band">
+        <div class="lp-cta-inner">
+          <h2>30 saniyede kur, bugün düzene gir.</h2>
+          <p>Kredi kartı yok, kurulum yok. Hemen ücretsiz dene.</p>
+          <a href="#giris" class="btn-primary lp-cta lg">🚀 Ücretsiz Başla</a>
+          <div class="lp-install" id="lp-install">
+            <button class="lp-install-link" id="installBtn">📲 Ana ekrana ekle</button>
+            <p class="lp-install-tip" id="installTip"></p>
+          </div>
         </div>
       </section>
 
