@@ -45,10 +45,10 @@ module.exports = async (req, res) => {
     await sql`alter table org_plans add column if not exists expires_at timestamptz`;
 
     if (req.method === "GET") {
-      const rows = await sql`select data, updated_at from org_state where org_id = ${claim.org}`;
+      const rows = await sql`select data, (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${claim.org}`;
       const plan = await getPlan(sql, claim.org);
       res.status(200).json(rows.length
-        ? { data: rows[0].data, updatedAt: rows[0].updated_at, plan }
+        ? { data: rows[0].data, updatedAt: Number(rows[0].ver), plan }
         : { data: null, updatedAt: null, plan });
       return;
     }
@@ -56,11 +56,27 @@ module.exports = async (req, res) => {
       let body = req.body; if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
       const data = body && body.data;
       if (data === undefined || data === null) { res.status(400).json({ error: "no_data" }); return; }
-      const r = await sql`
-        insert into org_state (org_id, data, updated_at) values (${claim.org}, ${JSON.stringify(data)}::jsonb, now())
-        on conflict (org_id) do update set data = excluded.data, updated_at = now()
-        returning updated_at`;
-      res.status(200).json({ ok: true, updatedAt: r[0].updated_at });
+      const baseVer = (body.baseUpdatedAt != null) ? Math.trunc(Number(body.baseUpdatedAt)) : null;
+
+      // Sürüm kilidi: yalnızca istemcinin gördüğü sürüm = buluttaki sürüm ise yaz (eski veri üzerine yazamaz)
+      let r = [];
+      if (baseVer != null) {
+        r = await sql`update org_state set data = ${JSON.stringify(data)}::jsonb, updated_at = now()
+          where org_id = ${claim.org} and (extract(epoch from updated_at)*1000)::bigint = ${baseVer}
+          returning (extract(epoch from updated_at)*1000)::bigint as ver`;
+      }
+      if (r.length) { res.status(200).json({ ok: true, updatedAt: Number(r[0].ver) }); return; }
+
+      // Yazılamadı: ya satır yok (ilk yazım) ya da sürüm uyuşmuyor (çakışma)
+      const cur = await sql`select data, (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${claim.org}`;
+      if (!cur.length) {
+        const ins = await sql`insert into org_state (org_id, data, updated_at) values (${claim.org}, ${JSON.stringify(data)}::jsonb, now())
+          returning (extract(epoch from updated_at)*1000)::bigint as ver`;
+        res.status(200).json({ ok: true, updatedAt: Number(ins[0].ver) });
+        return;
+      }
+      // Çakışma: bulutta daha yeni veri var -> ESKİYLE YAZMA, mevcut veriyi döndür
+      res.status(409).json({ conflict: true, data: cur[0].data, updatedAt: Number(cur[0].ver) });
       return;
     }
     res.status(405).json({ error: "method" });

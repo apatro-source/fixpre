@@ -172,6 +172,7 @@ async function doLogin(email, password) {
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
   if (j.plan) orgPlan = j.plan;
+  if (j.updatedAt != null) lastAppliedAt = j.updatedAt;   // sürüm kilidi için temel sürüm
   // giriş ekranında seçilen dili kullanıcıya uygula (menü o dilde gelsin)
   const me = DB.users.find((x) => x.id === j.userId);
   if (me && me.lang !== guestLang()) { me.lang = guestLang(); saveDB(DB); }
@@ -185,6 +186,7 @@ async function doRegister(name, email, password) {
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
   if (j.plan) orgPlan = j.plan;
+  if (j.updatedAt != null) lastAppliedAt = j.updatedAt;   // sürüm kilidi için temel sürüm
   saveLocal(DB);
   pushChecked = false;   // yeni hesap bu cihaza push için bağlansın
 }
@@ -3441,9 +3443,14 @@ async function dataPut(data) {
   const r = await fetch("/api/data", {
     method: "PUT",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken() },
-    body: JSON.stringify({ data }),
+    body: JSON.stringify({ data, baseUpdatedAt: lastAppliedAt }),   // sürüm kilidi için temel sürüm
   });
   if (r.status === 401) throw new Error("401");
+  if (r.status === 409) {                       // çakışma: bulutta daha yeni veri var
+    const j = await r.json().catch(() => ({}));
+    const err = new Error("conflict"); err.conflict = true; err.data = j.data; err.updatedAt = j.updatedAt;
+    throw err;
+  }
   if (!r.ok) throw new Error("put " + r.status);
   return r.json();
 }
@@ -3457,7 +3464,13 @@ function cloudPush(db) {
     try {
       const res = await dataPut(DB);   // ANLIK güncel veriyi gönder (eski snapshot değil)
       lastAppliedAt = res.updatedAt;
-    } catch (e) { /* sessiz; localStorage yedeği var */ }
+    } catch (e) {
+      if (e && e.conflict) {
+        // Bulutta daha yeni veri var -> ESKİYLE YAZMA. Bulutu benimse (veri kaybını önler).
+        if (e.data) { DB = migrate(e.data); saveLocal(DB); lastAppliedAt = e.updatedAt; render(); }
+      }
+      /* diğer hatalar: sessiz; localStorage yedeği var */
+    }
     finally { pushing = false; }
   }, 700);
 }

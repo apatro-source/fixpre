@@ -82,9 +82,10 @@ module.exports = async (req, res) => {
         users: [{ id: userId, role: "yonetici", name, email, ownerId: orgId, managerId: null, venueIds: [], lang: "en" }],
         venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [],
       };
-      await sql`insert into org_state (org_id, data, updated_at) values (${orgId}, ${JSON.stringify(data)}::jsonb, now())`;
+      const ins = await sql`insert into org_state (org_id, data, updated_at) values (${orgId}, ${JSON.stringify(data)}::jsonb, now())
+        returning (extract(epoch from updated_at)*1000)::bigint as ver`;
       const plan = await getPlan(sql, orgId);
-      res.status(200).json({ token: sign({ uid: userId, org: orgId, role: "yonetici" }), userId, data, plan });
+      res.status(200).json({ token: sign({ uid: userId, org: orgId, role: "yonetici" }), userId, data, plan, updatedAt: Number(ins[0].ver) });
       return;
     }
 
@@ -96,9 +97,9 @@ module.exports = async (req, res) => {
         res.status(401).json({ error: "bad_credentials" }); return;
       }
       const acc = rows[0];
-      const st = await sql`select data from org_state where org_id = ${acc.org_id}`;
+      const st = await sql`select data, (extract(epoch from updated_at)*1000)::bigint as ver from org_state where org_id = ${acc.org_id}`;
       const plan = await getPlan(sql, acc.org_id);
-      res.status(200).json({ token: sign({ uid: acc.id, org: acc.org_id, role: acc.role }), userId: acc.id, data: st.length ? st[0].data : null, plan });
+      res.status(200).json({ token: sign({ uid: acc.id, org: acc.org_id, role: acc.role }), userId: acc.id, data: st.length ? st[0].data : null, plan, updatedAt: st.length ? Number(st[0].ver) : null });
       return;
     }
 
