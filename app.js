@@ -368,6 +368,17 @@ function todayKey() {
 function occKeyToday(t) {
   return (t.recurrence && t.recurrence.type !== "once") ? todayKey() : "once";
 }
+// Bir ISO zaman damgası BUGÜN mü (yerel tarih)
+function isTodayIso(iso) {
+  if (!iso) return false;
+  const d = new Date(iso), n = new Date();
+  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+}
+// Görev bugün mü tamamlandı (tek seferlik görev dün tamamlandıysa "bugün biten" sayılmasın)
+function doneTodayFor(t) {
+  const c = t.completions[occKeyToday(t)];
+  return !!(c && isTodayIso(c.at));
+}
 
 // Görev bugün aktif mi (personele görünmeli mi)?
 function occursToday(t) {
@@ -1451,7 +1462,7 @@ function mgrDashboard(u) {
   const all = visibleTasks(u);
   const todays = all.filter(occursToday);
   const active = todays.filter((t) => !doneForKey(t, occKeyToday(t)));
-  const done = todays.filter((t) => doneForKey(t, occKeyToday(t)));
+  const done = todays.filter((t) => doneTodayFor(t));   // yalnızca BUGÜN tamamlananlar
   const missed = pastMissedFor(all, dashFrom, dashTo);
   const openRep = incomingReports(u).filter((r) => r.status === "acik").length;
   const dateStr = new Date().toLocaleDateString(currentLocale(), {
