@@ -605,14 +605,30 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 /* ---- Pano: özet sayaç kartları (kompakt) ---- */
 .dash-date { font-size: 14px; font-weight: 700; color: var(--muted); margin: 2px 0 14px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-/* Bugünkü ilerleme çubuğu + eğlenceli mesaj */
-.prog-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; margin: 0 0 16px; box-shadow: var(--shadow); }
-.prog-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-.prog-pct { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #6366f1, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-.prog-msg { font-size: 14px; font-weight: 700; color: #475569; }
-.prog-bar { height: 12px; background: #eef2ff; border-radius: 999px; overflow: hidden; }
-.prog-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #ec4899); border-radius: 999px; transition: width .45s ease; }
-.prog-sub { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 700; }
+/* Premium: kişisel karşılama */
+.dash-greet { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin: 2px 0 14px; }
+.dg-hi { font-size: 22px; font-weight: 800; color: var(--lp-ink, #1e1b3a); letter-spacing: -.3px; }
+.dg-hi span { background: linear-gradient(135deg, #6366f1, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.dg-date { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* Premium: bugünkü ilerleme — halka (ring) göstergesi + cam efekti */
+.prog-card { border-radius: 18px; padding: 16px 20px; margin: 0 0 16px; box-shadow: var(--shadow); border: 1px solid var(--border); background: var(--panel); }
+.prog-card.glass { display: flex; align-items: center; gap: 20px;
+  background: linear-gradient(135deg, rgba(238,242,255,.75), rgba(252,231,243,.75));
+  border: 1px solid rgba(255,255,255,.7); box-shadow: 0 16px 40px -22px rgba(99,102,241,.45); }
+.prog-ring { width: 116px; height: 116px; flex-shrink: 0; }
+.prog-ring svg { width: 100%; height: 100%; animation: ringpop .6s cubic-bezier(.2,.8,.2,1); }
+@keyframes ringpop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+.prog-info { flex: 1; min-width: 0; }
+.prog-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: .6px; color: #6d28d9; opacity: .85; }
+.prog-msg { font-size: 17px; font-weight: 800; color: #334155; margin: 3px 0 4px; }
+.prog-sub { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.prog-card.celebrate { animation: celebrate 1.3s ease-in-out infinite alternate; }
+@keyframes celebrate {
+  from { box-shadow: 0 0 0 2px #fcd34d, 0 12px 30px -16px rgba(245,158,11,.5); }
+  to   { box-shadow: 0 0 0 3px #f59e0b, 0 20px 46px -10px rgba(245,158,11,.75); }
+}
+@media (max-width: 480px) { .prog-card.glass { gap: 14px; } .prog-ring { width: 96px; height: 96px; } .prog-msg { font-size: 15px; } }
 /* Haftanın Yıldızı (ödül/rekabet kartı) */
 .week-star { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #fffbeb, #fde68a);
   border: 1px solid #fcd34d; border-radius: 16px; padding: 13px 18px; margin: 0 0 14px;

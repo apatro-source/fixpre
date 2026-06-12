@@ -1450,11 +1450,26 @@ function progressCard(active, done) {
   const total = active.length + done.length;
   if (!total) return "";   // bugün görev yoksa gösterme
   const p = Math.round((done.length / total) * 100);
+  const C = 326.73;                          // 2πr (r=52)
+  const off = (C * (1 - p / 100)).toFixed(1);
   return `
-    <div class="prog-card">
-      <div class="prog-top"><span class="prog-pct">${p}%</span><span class="prog-msg">${progressMsg(p)}</span></div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div>
-      <div class="prog-sub">${done.length} / ${total} ✓</div>
+    <div class="prog-card glass${p >= 100 ? " celebrate" : ""}">
+      <div class="prog-ring">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#ec4899"/>
+          </linearGradient></defs>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#eef2ff" stroke-width="12"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="url(#ringg)" stroke-width="12" stroke-linecap="round"
+            stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 60 60)"/>
+          <text x="60" y="69" text-anchor="middle" font-size="27" font-weight="800" fill="#1e1b3a">${p}%</text>
+        </svg>
+      </div>
+      <div class="prog-info">
+        <div class="prog-eyebrow">BUGÜNKÜ İLERLEME</div>
+        <div class="prog-msg">${progressMsg(p)}</div>
+        <div class="prog-sub">${done.length} / ${total} ✓</div>
+      </div>
     </div>`;
 }
 
@@ -1490,7 +1505,12 @@ function mgrDashboard(u) {
     ${(orgPlan.expired || (orgPlan.daysLeft != null && orgPlan.daysLeft <= 7)) ? planStatusBanner() : ""}
     ${resolvedBanner(u)}
     ${leaveBanner(u)}
-    <div class="dash-date">📅 ${dateStr}</div>
+    ${(() => {
+      const h = new Date().getHours();
+      const g = h < 6 ? "🌙 İyi geceler" : h < 12 ? "☀️ Günaydın" : h < 18 ? "👋 İyi günler" : "🌆 İyi akşamlar";
+      const first = esc((u.name || "").split(" ")[0] || "");
+      return `<div class="dash-greet"><div class="dg-hi"><span>${g}</span>, ${first}!</div><div class="dg-date">📅 ${dateStr}</div></div>`;
+    })()}
     ${weekStarCard(all)}
     <div class="stats">
       ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
