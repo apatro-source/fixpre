@@ -1855,6 +1855,18 @@ function shiftView(u) {
       ${mine.length ? mine.map((r) => shiftReqCard(u, r)).join("") : `<div class="empty">Henüz talebiniz yok.</div>`}`;
   }
 
+  // Yazdırılabilir (PDF) vardiya tablosu — yalnızca yazdırmada görünür
+  const printGrid = (ppl) => `
+    <table class="sp-table">
+      <thead><tr><th>Kişi</th>${dates.map((dk) => { const d = new Date(dk + "T00:00:00"); return `<th>${WD_SHORT[d.getDay()]} ${d.getDate()}</th>`; }).join("")}</tr></thead>
+      <tbody>${ppl.map((p) => `<tr><td>${esc(p.name)}</td>${dates.map((dk) => { const c = shiftCellContent(p.id, dk); return `<td>${c.html || "—"}</td>`; }).join("")}</tr>`).join("")}</tbody>
+    </table>`;
+  const printFallback = isMgr ? people : people.filter((p) => (p.venueIds || []).some((v) => myVenueIds.includes(v)) || p.id === u.id);
+  const printSections = vlist.length
+    ? (vlist.map((v) => { const ppl = people.filter((p) => (p.venueIds || []).includes(v.id)); return ppl.length ? `<h3 class="sp-h">📍 ${esc(v.name)}</h3>${printGrid(ppl)}` : ""; }).join("")
+       + (noVenue.length ? `<h3 class="sp-h">📍 Lokasyonsuz</h3>${printGrid(noVenue)}` : ""))
+    : printGrid(printFallback);
+
   return `
     <div class="section-title">📅 Haftalık Vardiya</div>
     <div class="shift-nav">
@@ -1862,11 +1874,17 @@ function shiftView(u) {
       <span class="shift-range">${fmtDayShort(dates[0])} – ${fmtDayShort(dates[6])}${shiftWeekOffset === 0 ? " · Bu hafta" : ""}</span>
       <button class="btn-ghost btn-sm" id="sh_next">Sonraki →</button>
     </div>
+    <button class="btn-ghost btn-sm no-print" id="shift_pdf" style="margin:0 0 10px">🖨️ PDF olarak indir</button>
     ${legend}
     ${gridSection}
     ${defBlock}
     ${mgrReqs}
     ${reqBlock}
+    <div id="shift-print" class="print-only">
+      <h2>📅 Haftalık Vardiya — Fixpre</h2>
+      <div style="color:#555;margin-bottom:10px">${fmtDayShort(dates[0])} – ${fmtDayShort(dates[6])} · ${new Date().toLocaleDateString(currentLocale())}</div>
+      ${printSections || "<div>Kişi yok.</div>"}
+    </div>
   `;
 }
 
@@ -1926,6 +1944,8 @@ function wireShift(u) {
   if (prev) prev.onclick = () => { shiftWeekOffset--; render(); };
   const next = document.getElementById("sh_next");
   if (next) next.onclick = () => { shiftWeekOffset++; render(); };
+  const spdf = document.getElementById("shift_pdf");
+  if (spdf) spdf.onclick = () => window.print();
 
   // Yönetici: hücreye tıkla → çalışıyor → vardiyalar (A,B,C…) → izinli → çalışıyor
   document.querySelectorAll("[data-shift]").forEach((b) => {

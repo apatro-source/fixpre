@@ -845,12 +845,15 @@ button.sh-cell:hover { background: #eef1f8; }
 @media print {
   body { background: #fff !important; }
   .topbar, .modal-overlay { display: none !important; }
-  .container > *:not(#perf-print) { display: none !important; }   /* sadece raporu yazdır */
-  #perf-print { display: block !important; }
-  #perf-print h2 { font-size: 18px; margin-bottom: 4px; }
-  #perf-print table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  #perf-print th, #perf-print td { border: 1px solid #bbb; padding: 5px 7px; font-size: 12px; text-align: left; }
+  .container > *:not(#perf-print):not(#shift-print) { display: none !important; }   /* sadece raporu yazdır */
+  #perf-print, #shift-print { display: block !important; }
+  #perf-print h2, #shift-print h2 { font-size: 18px; margin-bottom: 4px; }
+  #perf-print table, #shift-print table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  #perf-print th, #perf-print td, #shift-print th, #shift-print td { border: 1px solid #bbb; padding: 5px 7px; font-size: 12px; text-align: left; }
   #perf-print .bal { border: none; padding: 0; background: none; }
+  #shift-print th, #shift-print td { text-align: center; }
+  #shift-print th:first-child, #shift-print td:first-child { text-align: left; white-space: nowrap; }
+  #shift-print .sp-h { font-size: 14px; margin: 12px 0 4px; }
 }
 
 /* ---- Modal ---- */
