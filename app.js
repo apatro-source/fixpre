@@ -2735,28 +2735,36 @@ function mgrLog(u) {
   });
   records.sort((a, b) => new Date(b.when) - new Date(a.when));
 
+  // Lokasyona göre kayıt tablosu (Mekan sütunu yok — başlık zaten lokasyon)
+  const recTable = (items) => `
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Personel</th><th>Görev</th><th>Not</th><th>Tamamlanma Saati</th></tr></thead>
+      <tbody>
+        ${items.map((r) => `<tr>
+          <td>${esc(r.staff ? r.staff.name : "Silinmiş")}</td>
+          <td>${esc(r.task.title)}</td>
+          <td>${r.note ? "📝 " + esc(r.note) : "—"}</td>
+          <td class="when" style="white-space:nowrap">${fmtDate(r.when)}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    </div>`;
+  const venues = visibleVenues(u);
+  const groupsHtml = venues.map((v) => {
+    const items = records.filter((r) => r.task.venueId === v.id);
+    if (!items.length) return "";
+    return `<details class="cat" style="margin-bottom:10px"><summary><span>📍 ${esc(v.name)} (${items.length})</span></summary><div class="cat-body" style="padding:10px">${recTable(items)}</div></details>`;
+  }).join("");
+  const noV = records.filter((r) => !r.task.venueId || !venueById(r.task.venueId));
+  const noVHtml = noV.length
+    ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz (${noV.length})</span></summary><div class="cat-body" style="padding:10px">${recTable(noV)}</div></details>`
+    : "";
+
   return rangeFilter("log", logFrom, logTo) + `
     <div class="card">
       <h2>Tamamlanan Görev Kayıtları (${records.length})</h2>
-      ${records.length ? `
-        <div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Personel</th><th>Görev</th><th>Mekan</th><th>Not</th><th>Tamamlanma Saati</th></tr></thead>
-          <tbody>
-            ${records.map((r) => {
-              const v = r.task.venueId ? venueById(r.task.venueId) : null;
-              return `<tr>
-                <td>${esc(r.staff ? r.staff.name : "Silinmiş")}</td>
-                <td>${esc(r.task.title)}</td>
-                <td>${v ? esc(v.name) : "—"}</td>
-                <td>${r.note ? "📝 " + esc(r.note) : "—"}</td>
-                <td class="when" style="white-space:nowrap">${fmtDate(r.when)}</td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-        </table>
-        </div>
-      ` : `<div class="empty">Henüz tamamlanmış görev yok.</div>`}
+      ${records.length ? (groupsHtml + noVHtml) : `<div class="empty">Henüz tamamlanmış görev yok.</div>`}
     </div>
   `;
 }
