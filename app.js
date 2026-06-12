@@ -2510,6 +2510,7 @@ function mgrLog(u) {
     <div class="card">
       <h2>Tamamlanan Görev Kayıtları (${records.length})</h2>
       ${records.length ? `
+        <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Personel</th><th>Görev</th><th>Mekan</th><th>Not</th><th>Tamamlanma Saati</th></tr></thead>
           <tbody>
@@ -2520,11 +2521,12 @@ function mgrLog(u) {
                 <td>${esc(r.task.title)}</td>
                 <td>${v ? esc(v.name) : "—"}</td>
                 <td>${r.note ? "📝 " + esc(r.note) : "—"}</td>
-                <td class="when">${fmtDate(r.when)}</td>
+                <td class="when" style="white-space:nowrap">${fmtDate(r.when)}</td>
               </tr>`;
             }).join("")}
           </tbody>
         </table>
+        </div>
       ` : `<div class="empty">Henüz tamamlanmış görev yok.</div>`}
     </div>
   `;
@@ -3373,6 +3375,7 @@ function staffHistory(u) {
     <div class="card">
       <h2>Biten Görevler (${recs.length})</h2>
       ${recs.length ? `
+        <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Görev</th><th>Mekan</th><th>Tamamlayan</th><th>Not</th><th>Tarih</th></tr></thead>
           <tbody>
@@ -3383,11 +3386,12 @@ function staffHistory(u) {
                 <td>${v ? esc(v.name) : "—"}</td>
                 <td>${esc(r.by ? r.by.name : "Silinmiş")}${r.by && r.by.id === u.id ? " (siz)" : ""}</td>
                 <td>${r.note ? "📝 " + esc(r.note) : "—"}</td>
-                <td class="when">${fmtDate(r.when)}</td>
+                <td class="when" style="white-space:nowrap">${fmtDate(r.when)}</td>
               </tr>`;
             }).join("")}
           </tbody>
         </table>
+        </div>
       ` : `<div class="empty">Seçilen aralıkta biten görev yok.</div>`}
     </div>
   `;
