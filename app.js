@@ -1390,6 +1390,42 @@ function lastUndoFor(t, key) {
   return evs.slice().sort((a, b) => new Date(b.at) - new Date(a.at))[0];
 }
 
+// Bu haftanın (Pzt–Paz) en çok görev tamamlayan personeli — ödül/rekabet kartı
+function weekStar(tasks) {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dow = (d.getDay() + 6) % 7;                 // Pazartesi = 0
+  const mon = new Date(d); mon.setDate(d.getDate() - dow);
+  const nextMon = new Date(mon); nextMon.setDate(mon.getDate() + 7);
+  const cnt = {};
+  tasks.forEach((t) => {
+    const comps = t.completions || {};
+    Object.keys(comps).forEach((k) => {
+      const c = comps[k];
+      if (!c || !c.by || !c.at) return;
+      const at = new Date(c.at);
+      if (at >= mon && at < nextMon) cnt[c.by] = (cnt[c.by] || 0) + 1;
+    });
+  });
+  let bestId = null, best = 0;
+  Object.keys(cnt).forEach((id) => { if (cnt[id] > best) { best = cnt[id]; bestId = id; } });
+  if (!bestId) return null;
+  return { user: userById(bestId), count: best };
+}
+function weekStarCard(tasks) {
+  const s = weekStar(tasks);
+  if (!s || !s.user) return "";
+  return `
+    <div class="week-star">
+      <div class="ws-crown">👑</div>
+      <div class="ws-body">
+        <div class="ws-label">★ Haftanın Yıldızı</div>
+        <div class="ws-name">${esc(s.user.name)}</div>
+      </div>
+      <div class="ws-count">${s.count} ✓</div>
+    </div>`;
+}
+
 function mgrDashboard(u) {
   const all = visibleTasks(u);
   const todays = all.filter(occursToday);
@@ -1423,10 +1459,10 @@ function mgrDashboard(u) {
     ${resolvedBanner(u)}
     ${leaveBanner(u)}
     <div class="dash-date">📅 ${dateStr}</div>
+    ${weekStarCard(all)}
     <div class="stats">
       ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
       ${statCard("Bugün Biten", done.length, "green", "✅")}
-      ${statCard("Geciken", missed.length, "red", "⏰")}
       ${statCard("Açık Talep", openRep, "amber", "📨")}
       ${statCard("Toplam Görev", all.length, "gray", "📋")}
     </div>

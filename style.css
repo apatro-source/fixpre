@@ -604,7 +604,17 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 
 /* ---- Pano: özet sayaç kartları (kompakt) ---- */
 .dash-date { font-size: 14px; font-weight: 700; color: var(--muted); margin: 2px 0 14px; }
-.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+/* Haftanın Yıldızı (ödül/rekabet kartı) */
+.week-star { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #fffbeb, #fde68a);
+  border: 1px solid #fcd34d; border-radius: 16px; padding: 13px 18px; margin: 0 0 14px;
+  box-shadow: 0 10px 24px -12px rgba(245,158,11,.55); }
+.ws-crown { font-size: 30px; line-height: 1; }
+.ws-body { flex: 1; min-width: 0; }
+.ws-label { font-size: 11px; font-weight: 800; letter-spacing: .5px; color: #d97706; text-transform: uppercase; }
+.ws-name { font-size: 18px; font-weight: 800; color: #92400e; line-height: 1.2; }
+.ws-count { font-size: 17px; font-weight: 800; color: #b45309; background: rgba(255,255,255,.6);
+  border-radius: 12px; padding: 6px 14px; white-space: nowrap; }
 .stat-card {
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow);
