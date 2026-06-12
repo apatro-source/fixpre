@@ -604,7 +604,15 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 
 /* ---- Pano: özet sayaç kartları (kompakt) ---- */
 .dash-date { font-size: 14px; font-weight: 700; color: var(--muted); margin: 2px 0 14px; }
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+/* Bugünkü ilerleme çubuğu + eğlenceli mesaj */
+.prog-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; margin: 0 0 16px; box-shadow: var(--shadow); }
+.prog-top { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.prog-pct { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #6366f1, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.prog-msg { font-size: 14px; font-weight: 700; color: #475569; }
+.prog-bar { height: 12px; background: #eef2ff; border-radius: 999px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #ec4899); border-radius: 999px; transition: width .45s ease; }
+.prog-sub { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 700; }
 /* Haftanın Yıldızı (ödül/rekabet kartı) */
 .week-star { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #fffbeb, #fde68a);
   border: 1px solid #fcd34d; border-radius: 16px; padding: 13px 18px; margin: 0 0 14px;

@@ -1426,6 +1426,27 @@ function weekStarCard(tasks) {
     </div>`;
 }
 
+// Bugünkü görev ilerleme yüzdesi + tempoya göre eğlenceli mesaj
+function progressMsg(p) {
+  if (p >= 100) return "🎉 Harikasınız! Tüm görevler tamam!";
+  if (p >= 70) return "✈️ Uçuşa geçtik — az kaldı!";
+  if (p >= 50) return "🏃 Hareketlilik başladı!";
+  if (p >= 30) return "🔥 Tempo yükseliyor!";
+  if (p > 0) return "☕ Isınıyoruz — ekip daha kahvede!";
+  return "🌅 Gün yeni başlıyor — ilk görevi kapın!";
+}
+function progressCard(active, done) {
+  const total = active.length + done.length;
+  if (!total) return "";   // bugün görev yoksa gösterme
+  const p = Math.round((done.length / total) * 100);
+  return `
+    <div class="prog-card">
+      <div class="prog-top"><span class="prog-pct">${p}%</span><span class="prog-msg">${progressMsg(p)}</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div>
+      <div class="prog-sub">${done.length} / ${total} ✓</div>
+    </div>`;
+}
+
 function mgrDashboard(u) {
   const all = visibleTasks(u);
   const todays = all.filter(occursToday);
@@ -1463,9 +1484,9 @@ function mgrDashboard(u) {
     <div class="stats">
       ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
       ${statCard("Bugün Biten", done.length, "green", "✅")}
-      ${statCard("Açık Talep", openRep, "amber", "📨")}
       ${statCard("Toplam Görev", all.length, "gray", "📋")}
     </div>
+    ${progressCard(active, done)}
 
     ${assignedSection}
     ${announcementsBoard(u)}
