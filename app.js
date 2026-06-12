@@ -1515,6 +1515,7 @@ function mgrDashboard(u) {
     <div class="stats">
       ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
       ${statCard("Bugün Biten", done.length, "green", "✅")}
+      ${statCard("Açık Talep", openRep, "amber", "📨")}
       ${statCard("Toplam Görev", all.length, "gray", "📋")}
     </div>
     ${progressCard(active, done)}
