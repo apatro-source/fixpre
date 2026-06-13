@@ -495,6 +495,14 @@ function canApproveShift(u, staffId) {
 function orgShiftDefs(owner) { return (DB.shiftDefs || []).filter((d) => d.ownerId === owner); }
 function defById(id) { return (DB.shiftDefs || []).find((d) => d.id === id) || null; }
 function assignOf(userId, dateKey) { return (DB.shiftAssign || []).find((a) => a.userId === userId && a.date === dateKey) || null; }
+// Kişinin EN SIK kullandığı vardiya tanımı (çalışmaya dönen güne saat gelsin diye)
+function usualDefId(userId) {
+  const counts = {};
+  (DB.shiftAssign || []).forEach((a) => { if (a.userId === userId && a.defId && defById(a.defId)) counts[a.defId] = (counts[a.defId] || 0) + 1; });
+  let best = null, n = 0;
+  Object.keys(counts).forEach((d) => { if (counts[d] > n) { n = counts[d]; best = d; } });
+  return best;
+}
 // Bir hücrenin durumu: izinli / vardiya atanmış / sade çalışıyor
 function cellState(userId, dateKey) {
   if (isOff(userId, dateKey)) return { kind: "off" };
@@ -1993,6 +2001,11 @@ function decideShiftReq(id, status, u) {
       if (!dk) return;
       const i = DB.shifts.findIndex((s) => s.userId === userId && s.date === dk);
       if (i >= 0) DB.shifts.splice(i, 1);
+      // çalışmaya dönen güne kişinin olağan vardiyasını ata (saat gelsin, sade tik kalmasın)
+      if (!assignOf(userId, dk)) {
+        const def = usualDefId(userId);
+        if (def) DB.shiftAssign.push({ id: uid(), ownerId: r.ownerId, userId, date: dk, defId: def, by: u.id });
+      }
     };
     if (r.type === "takas") {
       // İzin günü takası: istenen gün ↔ eski izin günü iki kişi arasında yer değiştirir
