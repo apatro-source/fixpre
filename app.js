@@ -412,6 +412,12 @@ function completionOf(t, key) { return t.completions[key] || null; }
 function doneForKey(t, key) {
   return t.assignedUserIds.length > 0 && !!t.completions[key];
 }
+// Görevi kim oluşturdu? (yönetici → "Yönetici"; şef/personel → adı)
+function creatorText(t) {
+  const c = userById(t.createdBy);
+  if (!c) return "—";
+  return c.role === "yonetici" ? "Yönetici" : c.name;
+}
 // Tamamlanmış tek seferlik görev mi? (listede gizlenir ama DB'de kalır → kayıt/performans korunur)
 function isDoneOnce(t) {
   return t.recurrence && t.recurrence.type === "once" && t.completions && !!t.completions["once"];
@@ -2466,6 +2472,7 @@ function mgrTaskCard(t) {
         ${t.startTime ? `<span class="tag starttime">🕐 Başlama: ${t.startTime}</span>` : ""}
         ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
+        <span class="tag creator">🖊️ Oluşturan: ${esc(creatorText(t))}</span>
         <span class="tag">Oluşturuldu: ${fmtDate(t.createdAt)}</span>
       </div>
       <div class="status-line"><strong>${recurring ? "Bugünkü durum" : "Durum"}:</strong></div>
@@ -3852,6 +3859,7 @@ function staffTaskCard(t, u, extra = "") {
         ${t.startTime ? `<span class="tag starttime">🕐 Başlama: ${t.startTime}</span>` : ""}
         ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
+        <span class="tag creator">🖊️ Oluşturan: ${esc(creatorText(t))}</span>
         ${others.length ? `<span class="tag">+${others.length} kişi daha atanmış</span>` : ""}
       </div>
       ${footer}
