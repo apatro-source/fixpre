@@ -743,6 +743,7 @@ td .when, td.when { color: var(--muted); font-size: 13px; }
 .rcat { font-weight: 800; font-size: 14px; }
 .badge-open { background: #fef3c7; color: #b45309; }
 .badge-done { background: #d1fae5; color: #065f46; }
+.badge-progress { background: #dbeafe; color: #1d4ed8; }
 .report-text { font-size: 14px; white-space: pre-wrap; }
 .report-meta { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .report-reply {

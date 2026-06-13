@@ -368,7 +368,7 @@ function venuesForUser(u) {
 function markReportsSeen(u) {
   let changed = false;
   myReports(u).forEach((r) => {
-    if (r.status === "cozuldu" && !r.seenByReporter) { r.seenByReporter = true; changed = true; }
+    if ((r.status === "cozuldu" || r.status === "bildirildi") && !r.seenByReporter) { r.seenByReporter = true; changed = true; }
   });
   if (changed) saveDB(DB);
 }
@@ -3205,22 +3205,48 @@ function reportCard(u, r, canResolve) {
   const cat = reportCat(r.category);
   const reporter = userById(r.createdBy);
   const venue = r.venueId ? venueById(r.venueId) : null;
+  const isAriza = r.category === "ariza";
+  const isReporter = u.id === r.createdBy;
   const resolved = r.status === "cozuldu";
+  const notified = r.status === "bildirildi";   // Arıza: teknik ekibe bildirildi
   const solver = r.resolvedBy ? userById(r.resolvedBy) : null;
+  const techBy = r.techReportedBy ? userById(r.techReportedBy) : null;
+
+  let badge;
+  if (resolved) badge = `<span class="badge badge-done">${isAriza ? "Giderildi" : "Çözüldü"}</span>`;
+  else if (notified) badge = `<span class="badge badge-progress">Teknik ekibe bildirildi</span>`;
+  else badge = `<span class="badge badge-open">Açık</span>`;
+
+  // Aksiyonlar
+  let actions = "";
+  if (!resolved) {
+    if (isAriza) {
+      if (r.status === "acik" && canResolve) {
+        actions = `<div class="report-actions"><button class="btn-primary btn-sm" data-techreport="${r.id}">🔧 Teknik ekibe bildirildi</button></div>`;
+      } else if (notified && isReporter) {
+        actions = `<div class="report-actions"><button class="btn-green btn-sm" data-faultdone="${r.id}">✅ Arıza giderildi</button></div>`;
+      } else if (notified) {
+        actions = `<div class="report-meta">⏳ Arızayı yazanın "giderildi" onayı bekleniyor.</div>`;
+      }
+    } else if (canResolve) {
+      actions = `<div class="report-actions">
+        <input class="rresolve-note" data-note="${r.id}" placeholder="Çözüm notu (opsiyonel)" />
+        <button class="btn-green btn-sm" data-resolve="${r.id}">Çözüldü olarak işaretle</button>
+      </div>`;
+    }
+  }
+
   return `
     <div class="report ${resolved ? "resolved" : ""}">
       <div class="report-head">
         <span class="rcat">${cat.icon} ${cat.label}</span>
-        <span class="badge ${resolved ? "badge-done" : "badge-open"}">${resolved ? "Çözüldü" : "Açık"}</span>
+        ${badge}
       </div>
       <div class="report-text">${esc(r.text)}</div>
       <div class="report-meta">${roleIcon(reporter)} ${esc(reporter ? reporter.name : "?")} → ${esc(reportTargetLabel(r))}${venue ? " · 📍 " + esc(venue.name) : ""} · ${fmtDate(r.createdAt)}</div>
-      ${resolved ? `<div class="report-reply">✅ ${esc(r.reply || "Çözüldü")}<span class="report-meta"> — ${fmtDate(r.resolvedAt)}${solver ? " · " + esc(solver.name) : ""}</span></div>` : ""}
-      ${(!resolved && canResolve) ? `
-        <div class="report-actions">
-          <input class="rresolve-note" data-note="${r.id}" placeholder="Çözüm notu (opsiyonel)" />
-          <button class="btn-green btn-sm" data-resolve="${r.id}">Çözüldü olarak işaretle</button>
-        </div>` : ""}
+      ${notified && techBy ? `<div class="report-meta">🔧 ${esc(techBy.name)} <span>teknik ekibe bildirdi</span> · ${fmtDate(r.techReportedAt)}</div>` : ""}
+      ${resolved ? `<div class="report-reply">✅ ${esc(r.reply || (isAriza ? "Arıza giderildi" : "Çözüldü"))}<span class="report-meta"> — ${fmtDate(r.resolvedAt)}${solver ? " · " + esc(solver.name) : ""}</span></div>` : ""}
+      ${actions}
     </div>`;
 }
 
@@ -3250,7 +3276,7 @@ function reportsView(u) {
   const inRng = (r) => inRange(r.createdAt, repFrom, repTo);
   const canResolve = u.role === "yonetici" || u.role === "sef";
   const incoming = incomingReports(u).filter(inRng).slice().sort(byDate);
-  const incOpen = incoming.filter((r) => r.status === "acik");
+  const incOpen = incoming.filter((r) => r.status !== "cozuldu");   // açık + teknik ekibe bildirildi
   const incDone = incoming.filter((r) => r.status === "cozuldu");
   const mine = (u.role !== "yonetici") ? myReports(u).filter(inRng).slice().sort(byDate) : [];
 
@@ -3283,9 +3309,12 @@ function reportsPanel(u) {
 
 // Gönderene "bildiriminiz çözüldü" yeşil şeridi
 function resolvedBanner(u) {
-  const unseen = myReports(u).filter((r) => r.status === "cozuldu" && !r.seenByReporter);
-  if (!unseen.length) return "";
-  return `<div class="notif-banner">✅ ${unseen.length} talebiniz çözüldü — "Talepler" sekmesinden görebilirsiniz.</div>`;
+  const done = myReports(u).filter((r) => r.status === "cozuldu" && !r.seenByReporter);
+  const tech = myReports(u).filter((r) => r.status === "bildirildi" && !r.seenByReporter);
+  let html = "";
+  if (done.length) html += `<div class="notif-banner">✅ ${done.length} talebiniz çözüldü — "Talepler" sekmesinden görebilirsiniz.</div>`;
+  if (tech.length) html += `<div class="notif-banner">🔧 ${tech.length} arızanız teknik ekibe bildirildi — giderildiyse "Talepler"den "Arıza giderildi"ye basın.</div>`;
+  return html;
 }
 
 function wireReports(u) {
@@ -3328,6 +3357,39 @@ function wireReports(u) {
       r.seenByReporter = false;     // gönderene bildirilecek
       saveDB(DB);
       notifyUsers([r.createdBy], "Talebiniz çözüldü", r.reply || r.text, "/");
+      render();
+    };
+  });
+
+  // Arıza: şef/yönetici "Teknik ekibe bildirildi" → arızayı yazana bildirim gider
+  document.querySelectorAll("[data-techreport]").forEach((b) => {
+    b.onclick = () => {
+      const r = DB.reports.find((x) => x.id === b.dataset.techreport);
+      if (!r) return;
+      r.status = "bildirildi";
+      r.techReportedBy = u.id;
+      r.techReportedAt = new Date().toISOString();
+      r.seenByReporter = false;
+      saveDB(DB);
+      notifyUsers([r.createdBy], "Arızanız teknik ekibe bildirildi 🔧", r.text, "/");
+      render();
+    };
+  });
+
+  // Arıza: arızayı YAZAN "Arıza giderildi" → konu kapanır
+  document.querySelectorAll("[data-faultdone]").forEach((b) => {
+    b.onclick = () => {
+      const r = DB.reports.find((x) => x.id === b.dataset.faultdone);
+      if (!r || r.createdBy !== u.id) return;   // sadece arızayı yazan kapatabilir
+      r.status = "cozuldu";
+      r.reply = "Arıza giderildi";
+      r.resolvedAt = new Date().toISOString();
+      r.resolvedBy = u.id;
+      r.seenByReporter = true;
+      saveDB(DB);
+      // şef/yönetici de haberdar olsun
+      const recips = [r.techReportedBy, ownerIdOf(u)].filter(Boolean);
+      notifyUsers(recips, "Arıza giderildi ✅", r.text, "/");
       render();
     };
   });
