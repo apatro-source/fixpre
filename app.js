@@ -291,6 +291,21 @@ function visibleTasks(u) {
   const myV = u.venueIds || [];
   return all.filter((t) => (t.venueId && myV.includes(t.venueId)) || (!t.venueId && t.createdBy === u.id));
 }
+// Bir görevi DÜZENLEYEBİLİR/SİLEBİLİR mi? (görme değil, müdahale yetkisi)
+//  - yönetici: org'daki tüm görevler
+//  - şef: YALNIZCA şef yapımı görevler (kendi lokasyonundaki) — yöneticinin görevine dokunamaz
+//  - personel: hiçbiri (sadece görür/tamamlar)
+function canEditTask(u, t) {
+  if (!t || !u) return false;
+  if (u.role === "yonetici") return t.ownerId === ownerIdOf(u);
+  if (u.role === "sef") {
+    const creator = userById(t.createdBy);
+    if (creator && creator.role === "yonetici") return false;   // yöneticinin görevine müdahale edemez
+    const myV = u.venueIds || [];
+    return t.createdBy === u.id || (t.venueId && myV.includes(t.venueId));
+  }
+  return false;
+}
 
 // Bir göreve atanabilecek kişiler:
 //  - yönetici: organizasyondaki şefler + personel
@@ -1335,6 +1350,7 @@ function wireTaskEdit(u) {
   document.getElementById("et_save").onclick = () => {
     const t = DB.tasks.find((x) => x.id === editingTask);
     if (!t) { close(); return; }
+    if (!canEditTask(currentUser(), t)) { close(); return; }   // yetkisiz değişikliği engelle
     const title = document.getElementById("et_title").value.trim();
     const desc = document.getElementById("et_desc").value.trim();
     const venueId = document.getElementById("et_venue").value || null;
@@ -2199,20 +2215,26 @@ function perfView(u) {
 function wireDelTask() {
   document.querySelectorAll("[data-del-task]").forEach((b) => {
     b.onclick = () => {
+      const t = DB.tasks.find((x) => x.id === b.dataset.delTask);
+      if (!canEditTask(currentUser(), t)) return;   // yöneticinin görevini şef silemez
       if (!confirm("Bu görev silinsin mi?")) return;
-      DB.tasks = DB.tasks.filter((t) => t.id !== b.dataset.delTask);
+      DB.tasks = DB.tasks.filter((x) => x.id !== b.dataset.delTask);
       saveDB(DB);
       render();
     };
   });
   document.querySelectorAll("[data-edit-task]").forEach((b) => {
-    b.onclick = () => { editingTask = b.dataset.editTask; render(); };
+    b.onclick = () => {
+      const t = DB.tasks.find((x) => x.id === b.dataset.editTask);
+      if (!canEditTask(currentUser(), t)) return;   // yöneticinin görevini şef düzenleyemez
+      editingTask = b.dataset.editTask; render();
+    };
   });
   // Yönetici/şef: tamamlanmış görevi "yapılmadı" say (geri al)
   document.querySelectorAll("[data-mgr-undo]").forEach((b) => {
     b.onclick = () => {
       const t = DB.tasks.find((x) => x.id === b.dataset.mgrUndo);
-      if (!t) return;
+      if (!t || !canEditTask(currentUser(), t)) return;
       if (!confirm("Bu görev 'yapılmadı' sayılsın mı? Tamamlama geri alınacak.")) return;
       const u = currentUser();
       const key = occKeyToday(t);
@@ -2363,6 +2385,7 @@ function mgrTaskCard(t) {
   const key = occKeyToday(t);
   const activeToday = occursToday(t);
   const done = doneForKey(t, key);
+  const canEdit = canEditTask(currentUser(), t);   // yöneticinin görevine şef dokunamaz
 
   const assigneeNames = t.assignedUserIds
     .map((id) => { const s = userById(id); return s ? s.name : "Silinmiş"; })
@@ -2378,8 +2401,8 @@ function mgrTaskCard(t) {
       rows = `<div class="completion-row">
         <span>✓ Tamamlandı</span>
         <span class="ok">${esc(who ? who.name : "?")} tarafından — ${fmtDate(c.at)}</span>
-      </div>${c.note ? `<div class="cnote-show">📝 ${esc(c.note)}</div>` : ""}
-      <div class="status-line"><button class="btn-ghost btn-sm" data-mgr-undo="${t.id}">↩️ Geri al (yapılmadı say)</button></div>`;
+      </div>${c.note ? `<div class="cnote-show">📝 ${esc(c.note)}</div>` : ""}${canEdit ? `
+      <div class="status-line"><button class="btn-ghost btn-sm" data-mgr-undo="${t.id}">↩️ Geri al (yapılmadı say)</button></div>` : ""}`;
     } else {
       rows = `<div class="completion-row">
         <span>Atananlardan biri yapacak</span>
@@ -2412,10 +2435,10 @@ function mgrTaskCard(t) {
     <div class="task ${done ? "done" : ""}">
       <div class="task-head">
         <div class="task-title">${esc(t.title)}</div>
-        <div class="item-actions">
+        ${canEdit ? `<div class="item-actions">
           <button class="btn-ghost btn-sm" data-edit-task="${t.id}">⚙️ Ayarlar</button>
           <button class="btn-danger" data-del-task="${t.id}">Sil</button>
-        </div>
+        </div>` : ""}
       </div>
       ${t.description ? `<div class="task-desc">${esc(t.description)}</div>` : ""}
       <div class="task-tags">
