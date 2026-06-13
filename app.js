@@ -1041,6 +1041,19 @@ function renderLogin() {
         </div>
       </section>
 
+      <section class="lp-spotlight">
+        <div class="lp-spot-card">
+          <div class="lp-spot-txt">
+            <span class="lp-badge">✨ YENİ</span>
+            <h2>📍 Konumlu Mesai Takibi</h2>
+            <p>Personel mesaiye telefondan başlar — sadece mekândayken. Giriş-çıkış ve çalışılan süre otomatik, doğru kaydedilir.</p>
+          </div>
+          <div class="lp-spot-art">
+            <img src="shots/mesai-clock.svg" alt="Konumlu mesai takibi" loading="lazy" onerror="this.style.display='none'" />
+          </div>
+        </div>
+      </section>
+
       <section class="lp-trustbar">
         <div class="lp-trust-item"><b>★★★★★</b><span>Kafe & restoranların tercihi</span></div>
         <div class="lp-trust-item"><b>📲</b><span>Telefonda tam ekran</span></div>
@@ -1327,8 +1340,13 @@ function renderManager(u) {
         { k: "izin", l: izinLabel },
         { k: "kayitlar", l: "Kayıtlar" },
       ];
-  // Mesai saati modülü açıksa "Mesai" sekmesini ekle
-  if (clockOn()) { tabs.push(["mesai", "Mesai"]); nav.push({ k: "mesai", l: "Mesai" }); }
+  // Mesai saati modülü açıksa "Mesai" sekmesini ekle ("Daha Fazla" grubuna; yoksa üst seviye)
+  if (clockOn()) {
+    tabs.push(["mesai", "Mesai"]);
+    const moreGrp = nav.find((x) => x.grp === "Daha Fazla");
+    if (moreGrp) moreGrp.items.push(["mesai", "Mesai"]);
+    else nav.push({ k: "mesai", l: "Mesai" });
+  }
 
   // şef olmayan bir sekme açılmışsa Bugün'e düş
   if (!tabs.some(([k]) => k === activeTab)) activeTab = "bugun";

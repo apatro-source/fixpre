@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 260" font-family="Segoe UI, Roboto, Arial, sans-serif">
+  <defs>
+    <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="geo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#c7d2fe"/><stop offset="1" stop-color="#eef2ff"/>
+    </radialGradient>
+  </defs>
+  <rect width="440" height="260" rx="20" fill="#ffffff"/>
+  <!-- header -->
+  <rect x="24" y="20" width="30" height="30" rx="9" fill="url(#mg)"/>
+  <text x="39" y="41" font-size="15" text-anchor="middle">⏱️</text>
+  <text x="64" y="40" font-size="17" font-weight="800" fill="#1e1b3a">Time Clock</text>
+  <rect x="350" y="22" width="66" height="24" rx="12" fill="#dcfce7"/>
+  <text x="383" y="38" font-size="11" font-weight="700" fill="#16a34a" text-anchor="middle">🟢 Open</text>
+
+  <!-- left: clock-in -->
+  <rect x="24" y="68" width="200" height="172" rx="16" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="44" y="98" font-size="12.5" fill="#64748b">Shift start</text>
+  <text x="44" y="132" font-size="32" font-weight="800" fill="#1e1b3a">08:02</text>
+  <rect x="44" y="150" width="160" height="44" rx="12" fill="#16a34a"/>
+  <text x="124" y="178" font-size="15" font-weight="800" fill="#ffffff" text-anchor="middle">🟢 Clock in</text>
+  <text x="44" y="222" font-size="12" font-weight="700" fill="#16a34a">✓ Clock-in saved</text>
+
+  <!-- right: geofence map -->
+  <rect x="236" y="68" width="180" height="172" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="326" y="92" font-size="11.5" font-weight="700" fill="#6366f1" text-anchor="middle">Location verified</text>
+  <circle cx="326" cy="152" r="58" fill="url(#geo)" opacity="0.75"/>
+  <circle cx="326" cy="152" r="58" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.6"/>
+  <text x="326" y="150" font-size="30" text-anchor="middle">📍</text>
+  <circle cx="352" cy="170" r="6" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+  <rect x="252" y="206" width="148" height="24" rx="12" fill="#ecfdf5"/>
+  <text x="326" y="222" font-size="11" font-weight="700" fill="#16a34a" text-anchor="middle">📍 At venue · Confirmed ✓</text>
+</svg>
