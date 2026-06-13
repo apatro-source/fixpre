@@ -572,6 +572,9 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .clock-info { font-size: 15px; font-weight: 800; color: #334155; }
 .clock-info span { font-weight: 600; color: var(--muted); }
 .clock-note { font-size: 12px; color: var(--muted); margin: -8px 0 14px; padding: 0 4px; line-height: 1.4; }
+.kvkk-note { margin: -6px 0 14px; padding: 0 2px; }
+.kvkk-note > summary { cursor: pointer; font-size: 12px; color: var(--muted); font-weight: 600; }
+.kvkk-note p { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 8px 0 0; }
 .status-line.not-started { color: #4338ca; font-weight: 700; font-size: 13.5px; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
 

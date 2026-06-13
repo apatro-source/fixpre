@@ -519,6 +519,8 @@ function distMeters(a1, o1, a2, o2) {   // haversine (metre)
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 const CLOCK_RADIUS_M = 100;   // mekâna en fazla bu kadar uzak olunabilir (m)
+// KVKK aydınlatma metni (personele gösterilir; işletme kendi bilgisini ekleyebilir)
+const KVKK_NOTICE = "İşletmeniz, mesai giriş/çıkış kaydının doğruluğu ve işyerinde bulunduğunuzun teyidi amacıyla, yalnızca giriş/çıkış yaptığınız anda konumunuzu bir kez alır. Sürekli veya canlı konum takibi yapılmaz; tam konumunuz saklanmaz, yalnızca işyerine yakın olup olmadığınız kaydedilir. Bu veriler yalnızca işvereniniz tarafından görülür ve üçüncü kişilerle paylaşılmaz. İşleme, çalışma ilişkisinin yürütülmesi kapsamında yapılır (KVKK). Haklarınız için işvereninize başvurabilirsiniz. Bu özellik isteğe bağlıdır.";
 function doClockIn(u) {
   if (openClock(u.id)) return;
   const venues = (u.venueIds || []).map(venueById).filter(Boolean);
@@ -561,7 +563,7 @@ function clockCard(u) {
     </div>`;
   }
   const note = clockNeedsLoc()
-    ? `<p class="clock-note">📍 Konumunuz yalnızca giriş anında, mekânda olduğunuzu doğrulamak için kullanılır; sürekli takip yapılmaz.</p>`
+    ? `<details class="kvkk-note"><summary>📍 Konumunuz yalnızca giriş anında, mekânda olduğunuzu doğrulamak için kullanılır; sürekli takip yapılmaz.</summary><p>${KVKK_NOTICE}</p></details>`
     : "";
   return `<div class="clock-card">
     <div class="clock-info">⏱️ <strong>Mesai</strong></div>
@@ -858,6 +860,7 @@ function mountProfile(u) {
           <label class="check-pill"><input type="checkbox" id="tc_enabled"${clockOn() ? " checked" : ""} /> Mesai saati takibini aç</label>
           <label class="check-pill" style="margin-top:6px"><input type="checkbox" id="tc_loc"${clockNeedsLoc() ? " checked" : ""} /> Konum zorunlu (mekâna yakın olunmalı)</label>
           <p style="color:var(--muted);font-size:12px;margin:6px 0 0">Konum zorunluysa her lokasyonun konumunu "Lokasyonlar"dan "📍 Konumu ayarla" ile kaydedin.</p>
+          <details class="kvkk-note" style="margin-top:8px"><summary>ℹ️ Konum & KVKK aydınlatması (personele gösterilir)</summary><p>${KVKK_NOTICE}</p><p style="font-weight:700;margin-top:6px">Bu özelliği kullanırken personelinizi bilgilendirin; dilerseniz şirket adı/iletişiminizi ekleyin.</p></details>
         </div>` : ""}
         <div class="form-actions">
           <button class="btn-primary" id="pf_save">Kaydet</button>
