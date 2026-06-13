@@ -1550,7 +1550,31 @@ function perfOnTime(t, dateKey, at) {
     if (!t.dueAt) return true;             // son tarihi yoksa zamanında say
     return new Date(at) <= new Date(t.dueAt);
   }
-  return ymd(new Date(at)) <= dateKey;     // o günde veya öncesinde yapıldıysa zamanında
+  const doneDay = ymd(new Date(at));
+  if (doneDay > dateKey) return false;     // sonraki gün → geç
+  if (doneDay < dateKey) return true;      // önceki gün (erken) → zamanında
+  // aynı gün: son saat (dueTime) varsa, o saate kadar yapıldıysa zamanında; sonra → geç
+  if (t.dueTime && /^\d{1,2}:\d{2}$/.test(t.dueTime)) {
+    const d = new Date(at);
+    const [hh, mm] = t.dueTime.split(":").map(Number);
+    return (d.getHours() * 60 + d.getMinutes()) <= (hh * 60 + mm);
+  }
+  return true;
+}
+
+// Bugün son saati (dueTime) geçmiş ama henüz yapılmamış görevler → ekip gecikmesi
+function dueTimeMissedToday(tasks, from, to) {
+  const tk = todayKey();
+  if (!dkInRange(tk, from, to)) return [];      // bugün aralık dışındaysa sayma
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return tasks.filter((t) => {
+    if (!t.dueTime || !/^\d{1,2}:\d{2}$/.test(t.dueTime)) return false;
+    if (!occursToday(t)) return false;
+    if (t.completions[occKeyToday(t)]) return false;   // yapılmışsa geciken değil
+    const [hh, mm] = t.dueTime.split(":").map(Number);
+    return nowMin > hh * 60 + mm;                       // son saat geçtiyse
+  });
 }
 
 function performanceData(owner, from, to) {
@@ -1566,9 +1590,13 @@ function performanceData(owner, from, to) {
       if (perfOnTime(t, dateKey, c.at)) stats[c.by].onTime++; else stats[c.by].late++;
     });
   });
-  // ekipçe yapılmamış (geciken) görevleri sorumlu kişilere yaz
+  // ekipçe yapılmamış (geciken) görevleri sorumlu kişilerin HEPSİNE yaz
   pastMissedFor(tasks, from, to).forEach((m) => {
     (m.task.assignedUserIds || []).forEach((id) => { if (stats[id]) stats[id].missed++; });
+  });
+  // bugün son saati geçmiş + yapılmamış → atanan herkese geciken (kimse üstlenmemiş gibi)
+  dueTimeMissedToday(tasks, from, to).forEach((t) => {
+    (t.assignedUserIds || []).forEach((id) => { if (stats[id]) stats[id].missed++; });
   });
   return people.map((p) => ({ user: p, s: stats[p.id] }));
 }
