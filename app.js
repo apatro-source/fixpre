@@ -418,6 +418,13 @@ function creatorText(t) {
   if (!c) return "—";
   return c.role === "yonetici" ? "Yönetici" : c.name;
 }
+// Görevi oluşturandan BAŞKASI düzenlediyse "değiştirdi" notu (asıl oluşturan düzenlediyse boş)
+function editedNote(t) {
+  if (!t.lastEditBy || t.lastEditBy === t.createdBy) return "";
+  const e = userById(t.lastEditBy);
+  if (!e) return "";
+  return `<div class="edited-note">✏️ ${esc(e.name)} <span>değiştirdi</span> · ${fmtDate(t.lastEditAt)}</div>`;
+}
 // Tamamlanmış tek seferlik görev mi? (listede gizlenir ama DB'de kalır → kayıt/performans korunur)
 function isDoneOnce(t) {
   return t.recurrence && t.recurrence.type === "once" && t.completions && !!t.completions["once"];
@@ -1393,6 +1400,10 @@ function wireTaskEdit(u) {
     t.assignedUserIds = assignees;
     t.startTime = document.getElementById("et_starttime").value || null;
     t.dueTime = document.getElementById("et_duetime").value || null;
+    // Başka bir kişi düzenlediyse "değiştiren" notu; asıl oluşturan düzenlerse not silinir
+    const editor = currentUser();
+    if (editor && editor.id !== t.createdBy) { t.lastEditBy = editor.id; t.lastEditAt = new Date().toISOString(); }
+    else { t.lastEditBy = null; t.lastEditAt = null; }
     saveDB(DB);
     editingTask = null;
     render();
@@ -2475,6 +2486,7 @@ function mgrTaskCard(t) {
         <span class="tag creator">🖊️ Oluşturan: ${esc(creatorText(t))}</span>
         <span class="tag">Oluşturuldu: ${fmtDate(t.createdAt)}</span>
       </div>
+      ${editedNote(t)}
       <div class="status-line"><strong>${recurring ? "Bugünkü durum" : "Durum"}:</strong></div>
       ${rows}
       ${readsHtml}
@@ -3862,6 +3874,7 @@ function staffTaskCard(t, u, extra = "") {
         <span class="tag creator">🖊️ Oluşturan: ${esc(creatorText(t))}</span>
         ${others.length ? `<span class="tag">+${others.length} kişi daha atanmış</span>` : ""}
       </div>
+      ${editedNote(t)}
       ${footer}
       ${extra}
     </div>
