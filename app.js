@@ -549,8 +549,25 @@ function doClockIn(u) {
 function doClockOut(u) {
   const open = openClock(u.id);
   if (!open) return;
-  open.outAt = new Date().toISOString();
-  saveDB(DB); render();
+  const finish = (distM) => {
+    open.outAt = new Date().toISOString();
+    open.outDistM = (distM == null ? null : Math.round(distM));
+    saveDB(DB); render();
+  };
+  if (clockNeedsLoc()) {
+    const v = open.venueId ? venueById(open.venueId) : null;
+    if (!navigator.geolocation) { alert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
+      if (v && v.lat != null) {
+        const d = distMeters(la, ln, v.lat, v.lng);
+        if (d > CLOCK_RADIUS_M) { alert("Mekâna yakın değilsiniz (~" + Math.round(d) + " m). Mesaiyi mekânda bitirin."); return; }
+        finish(d);
+      } else { finish(null); }
+    }, () => { alert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+  } else {
+    finish(null);
+  }
 }
 function clockCard(u) {
   if (!clockOn() || u.role === "yonetici") return "";
