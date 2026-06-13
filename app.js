@@ -689,9 +689,29 @@ function t(s) {
   return (typeof translateString === "function") ? translateString(s, activeLang()) : s;
 }
 
+// SEO: sayfa başlığı + açıklaması (TR baz; translateString ile aktif dile çevrilir)
+const SEO_TITLE = "Fixpre — Kafe & Restoran için Personel Takip ve Vardiya Sistemi";
+const SEO_DESC = "Kafe ve restoranlar için akıllı personel yönetimi: onaylı vardiya değişimi, mesai takibi, tekrarlayan görevler ve hiyerarşik düzen — hepsi tek panelde. 6 dil, ücretsiz başla.";
+function applyMetaForLang(lang) {
+  try {
+    const tr = (typeof translateString === "function");
+    const title = tr ? translateString(SEO_TITLE, lang) : SEO_TITLE;
+    const desc = tr ? translateString(SEO_DESC, lang) : SEO_DESC;
+    if (document.title !== title) document.title = title;
+    const set = (sel, val) => { const el = document.querySelector(sel); if (el && el.getAttribute("content") !== val) el.setAttribute("content", val); };
+    set('meta[name="description"]', desc);
+    set('meta[property="og:title"]', title);
+    set('meta[property="og:description"]', desc);
+    set('meta[name="twitter:title"]', title);
+    set('meta[name="twitter:description"]', desc);
+    if (document.documentElement.lang !== lang) document.documentElement.lang = lang;
+  } catch (e) { /* yoksay */ }
+}
+
 // Render sonrası ekranı kullanıcının (veya giriş öncesi misafir) diline çevir
 function translateUI() {
   if (typeof translateNode === "function") translateNode(app, activeLang());
+  applyMetaForLang(activeLang());   // başlık/açıklama da aktif dile göre (çok dilli SEO)
 }
 
 // Tıklama/Enter sonrası dinamik olarak değişen metinleri (hata/uyarı) da çevir.
