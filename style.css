@@ -542,6 +542,8 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .tag.venue { background: #fff4d6; color: #b45309; }
 .tag.rec { background: #dbf4ff; color: #0369a1; }
 .tag.duetime { background: #fee2e2; color: #b91c1c; font-weight: 700; }
+.tag.starttime { background: #e0e7ff; color: #4338ca; font-weight: 700; }
+.status-line.not-started { color: #4338ca; font-weight: 700; font-size: 13.5px; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
 
 /* Okunma durumu — tıklayınca açılır */

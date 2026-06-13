@@ -397,6 +397,13 @@ function completionOf(t, key) { return t.completions[key] || null; }
 function doneForKey(t, key) {
   return t.assignedUserIds.length > 0 && !!t.completions[key];
 }
+// Başlama saati geldi mi? (yoksa her zaman true). Öncesinde görev tamamlanamaz.
+function startReached(t) {
+  if (!t.startTime || !/^\d{1,2}:\d{2}$/.test(t.startTime)) return true;
+  const now = new Date();
+  const [hh, mm] = t.startTime.split(":").map(Number);
+  return (now.getHours() * 60 + now.getMinutes()) >= (hh * 60 + mm);
+}
 
 // Atanan kişi görevi görünce o günün "okundu" zamanını kaydeder (ilk görüşte)
 function markReads(u, tasks) {
@@ -1293,6 +1300,7 @@ function taskEditModal(u) {
             ${Array.from({ length: 31 }, (_, i) => i + 1).map((n) => `<label class="check-pill mini ${mdates.includes(n) ? "sel" : ""}"><input type="checkbox" class="et_mday" value="${n}" ${mdates.includes(n) ? "checked" : ""} />${n}</label>`).join("")}
           </div>
         </div>
+        <div class="field"><label>🕐 Başlama saati (opsiyonel) — bu saatten önce tamamlanamaz</label><input id="et_starttime" type="time" value="${t.startTime || ""}" /></div>
         <div class="field"><label>⏰ Son yapılma saati (opsiyonel) — bitmesine 1 saat kala uyarı gider</label><input id="et_duetime" type="time" value="${t.dueTime || ""}" /></div>
         <div class="field"><label>Atanan personel (birden fazla seçebilirsiniz)</label><div class="checks">${staffChecks}</div></div>
         <div class="form-actions">
@@ -1349,6 +1357,7 @@ function wireTaskEdit(u) {
     t.venueId = venueId;
     t.recurrence = recurrence;
     t.assignedUserIds = assignees;
+    t.startTime = document.getElementById("et_starttime").value || null;
     t.dueTime = document.getElementById("et_duetime").value || null;
     saveDB(DB);
     editingTask = null;
@@ -2199,6 +2208,26 @@ function wireDelTask() {
   document.querySelectorAll("[data-edit-task]").forEach((b) => {
     b.onclick = () => { editingTask = b.dataset.editTask; render(); };
   });
+  // Yönetici/şef: tamamlanmış görevi "yapılmadı" say (geri al)
+  document.querySelectorAll("[data-mgr-undo]").forEach((b) => {
+    b.onclick = () => {
+      const t = DB.tasks.find((x) => x.id === b.dataset.mgrUndo);
+      if (!t) return;
+      if (!confirm("Bu görev 'yapılmadı' sayılsın mı? Tamamlama geri alınacak.")) return;
+      const u = currentUser();
+      const key = occKeyToday(t);
+      const prev = t.completions[key];
+      delete t.completions[key];
+      const prevUser = prev && prev.by ? userById(prev.by) : null;
+      DB.undoLog.push({
+        id: uid(), ownerId: t.ownerId, taskId: t.id, taskCreatedBy: t.createdBy, title: t.title,
+        dateKey: key, by: u ? u.id : null, byName: u ? u.name : "Yönetici", at: new Date().toISOString(),
+        prevBy: prev ? prev.by : null, prevByName: prevUser ? prevUser.name : null, prevAt: prev ? prev.at : null, seen: false,
+      });
+      saveDB(DB);
+      render();
+    };
+  });
 }
 
 // Görev listesini mekana göre açılır-kapanır kategorilere böler
@@ -2306,6 +2335,10 @@ function mgrTasks(u) {
         </div>
       </div>
       <div class="field">
+        <label>🕐 Başlama saati (opsiyonel) — bu saatten önce tamamlanamaz</label>
+        <input id="t_starttime" type="time" />
+      </div>
+      <div class="field">
         <label>⏰ Son yapılma saati (opsiyonel) — bitmesine 1 saat kala personele uyarı gider</label>
         <input id="t_duetime" type="time" />
       </div>
@@ -2345,7 +2378,8 @@ function mgrTaskCard(t) {
       rows = `<div class="completion-row">
         <span>✓ Tamamlandı</span>
         <span class="ok">${esc(who ? who.name : "?")} tarafından — ${fmtDate(c.at)}</span>
-      </div>${c.note ? `<div class="cnote-show">📝 ${esc(c.note)}</div>` : ""}`;
+      </div>${c.note ? `<div class="cnote-show">📝 ${esc(c.note)}</div>` : ""}
+      <div class="status-line"><button class="btn-ghost btn-sm" data-mgr-undo="${t.id}">↩️ Geri al (yapılmadı say)</button></div>`;
     } else {
       rows = `<div class="completion-row">
         <span>Atananlardan biri yapacak</span>
@@ -2388,6 +2422,7 @@ function mgrTaskCard(t) {
         <span class="tag rec">🔁 ${recurrenceLabel(t)}</span>
         ${venue ? `<span class="tag venue">📍 ${esc(venue.name)}</span>` : ""}
         <span class="tag">👥 ${esc(assigneeNames)}</span>
+        ${t.startTime ? `<span class="tag starttime">🕐 Başlama: ${t.startTime}</span>` : ""}
         ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
         <span class="tag">Oluşturuldu: ${fmtDate(t.createdAt)}</span>
@@ -2444,6 +2479,7 @@ function wireMgrTasks(u) {
       venueId,
       recurrence,
       dueAt: dueRaw ? new Date(dueRaw).toISOString() : null,
+      startTime: document.getElementById("t_starttime").value || null,   // başlama saati (HH:MM) — öncesinde tamamlanamaz
       dueTime: document.getElementById("t_duetime").value || null,   // günlük son saat (HH:MM)
       assignedUserIds: assignees,
       createdAt: new Date().toISOString(),
@@ -3668,6 +3704,11 @@ function wireStaffToday(u) {
     b.onclick = () => {
       const t = DB.tasks.find((x) => x.id === b.dataset.complete);
       if (!t) return;
+      if (!startReached(t)) {
+        const msg = "Başlama saatinden önce görev tamamlanamaz.";
+        alert(typeof translateString === "function" ? translateString(msg, activeLang()) : msg);
+        return;
+      }
       const key = occKeyToday(t);
       const noteEl = document.querySelector(`.cnote[data-cnote="${t.id}"]`);
       const note = noteEl ? noteEl.value.trim() : "";
@@ -3736,11 +3777,11 @@ function staffTaskCard(t, u, extra = "") {
   const noteLine = (done && c.note) ? `<div class="cnote-show">📝 ${esc(c.note)}</div>` : "";
   let footer;
   if (!done) {
-    footer = `
+    footer = startReached(t) ? `
       <div class="complete-row">
         <input class="cnote" data-cnote="${t.id}" placeholder="Not eklemek isterseniz (opsiyonel)..." />
         <button class="btn-green" data-complete="${t.id}">Görevi Tamamla</button>
-      </div>`;
+      </div>` : `<div class="status-line not-started">🕐 Başlama saati ${t.startTime} — bu saatten önce tamamlanamaz.</div>`;
   } else if (byMe) {
     footer = `<div class="status-line">✓ ${fmtDate(c.at)} tarihinde siz tamamladınız.
       <button class="btn-ghost btn-sm" style="margin-left:8px" data-undo="${t.id}">Geri al</button></div>${noteLine}`;
@@ -3759,6 +3800,7 @@ function staffTaskCard(t, u, extra = "") {
       <div class="task-tags">
         <span class="tag rec">🔁 ${recurrenceLabel(t)}</span>
         ${venue ? `<span class="tag venue">📍 ${esc(venue.name)}</span>` : ""}
+        ${t.startTime ? `<span class="tag starttime">🕐 Başlama: ${t.startTime}</span>` : ""}
         ${t.dueTime ? `<span class="tag duetime">⏰ Son saat: ${t.dueTime}</span>` : ""}
         ${t.dueAt ? `<span class="tag">Son tarih: ${fmtDate(t.dueAt)}</span>` : ""}
         ${others.length ? `<span class="tag">+${others.length} kişi daha atanmış</span>` : ""}
