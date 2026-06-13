@@ -341,10 +341,10 @@ function incomingReports(u) {
   const all = orgReports(ownerIdOf(u));
   if (u.role === "yonetici") return all;           // yönetici tüm lokasyonlardaki talepleri görür
   if (u.role === "sef") {
-    // Şef yalnızca SORUMLU olduğu lokasyondaki personel taleplerini görür.
-    // Şef talepleri sadece yöneticiye gider (diğer şefler görmez).
+    // Şef, SORUMLU olduğu lokasyondaki TÜM talepleri görür (personel + aynı lokasyondaki diğer şef).
+    // Böylece aynı talebi iki şef ayrı ayrı yazmaz. Farklı lokasyonun talebini görmez. Kendi yazdığı "Gönderdiğim"de.
     const myV = u.venueIds || [];
-    return all.filter((r) => r.target === "lokasyon" && r.venueId && myV.includes(r.venueId));
+    return all.filter((r) => r.venueId && myV.includes(r.venueId) && r.createdBy !== u.id);
   }
   return [];
 }
@@ -3279,12 +3279,8 @@ function wireReports(u) {
     const err = document.getElementById("rep_err");
     if (!text) { err.textContent = "Lütfen açıklama yazın."; return; }
     if (!venueId) { err.textContent = "Lütfen lokasyon seçin."; return; }   // mekan zorunlu
-    let toUserId = null, target;
-    if (u.role === "sef") {
-      target = "yonetici"; toUserId = ownerIdOf(u);   // şef → yönetici (diğer şefler görmez)
-    } else {
-      target = "lokasyon"; toUserId = null;            // personel → o lokasyonun şefleri + yönetici
-    }
+    // Tüm talepler lokasyona bağlı: aynı lokasyonun şefleri (yazan hariç) + yönetici görür
+    const target = "lokasyon", toUserId = null;
     DB.reports.push({
       id: uid(), ownerId: ownerIdOf(u), createdBy: u.id, toUserId, target,
       category, text, venueId, status: "acik",
@@ -3293,14 +3289,9 @@ function wireReports(u) {
     });
     saveDB(DB);
     // ilgili kişilere bildirim
-    let recips = [];
-    if (target === "lokasyon") {
-      // o lokasyonun sorumlu şefleri + yönetici
-      recips = orgChefs(ownerIdOf(u)).filter((c) => (c.venueIds || []).includes(venueId)).map((c) => c.id);
-      recips.push(ownerIdOf(u));
-    } else {
-      recips = [ownerIdOf(u)];   // şef talebi → yönetici
-    }
+    // o lokasyonun şefleri (yazan hariç) + yönetici
+    let recips = orgChefs(ownerIdOf(u)).filter((c) => c.id !== u.id && (c.venueIds || []).includes(venueId)).map((c) => c.id);
+    recips.push(ownerIdOf(u));
     notifyUsers(recips, "Yeni talep", text, "/");
     render();
   };
