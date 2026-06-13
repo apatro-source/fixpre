@@ -545,6 +545,12 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .tag.starttime { background: #e0e7ff; color: #4338ca; font-weight: 700; }
 .tag.creator { background: #ede9fe; color: #6d28d9; }
 .edited-note { font-size: 12.5px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 8px; padding: 5px 10px; margin: 6px 0; display: inline-block; }
+/* Mesai saati (time clock) kartı */
+.clock-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 13px 18px; margin: 0 0 14px; box-shadow: var(--shadow); }
+.clock-card.on { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-color: #6ee7b7; }
+.clock-info { font-size: 15px; font-weight: 800; color: #334155; }
+.clock-info span { font-weight: 600; color: var(--muted); }
 .status-line.not-started { color: #4338ca; font-weight: 700; font-size: 13.5px; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
 

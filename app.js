@@ -64,6 +64,8 @@ function migrate(db) {
   if (!db.shiftDefs) db.shiftDefs = []; // vardiya tanımları: { id, ownerId, label, start, end }
   if (!db.shiftAssign) db.shiftAssign = []; // gün-vardiya ataması: { id, ownerId, userId, date, defId }
   if (!db.approvals) db.approvals = { leave: "yonetici", shift: "yonetici" }; // onay yetkisi: "yonetici" | "sef"
+  if (!db.clock) db.clock = [];       // mesai oturumları: { id, ownerId, userId, venueId, inAt, outAt, inLat, inLng, far }
+  if (!db.timeclock) db.timeclock = { enabled: false, requireLocation: false }; // mesai saati modülü (opsiyonel)
   (db.tasks || []).forEach((t) => {
     if (!t.recurrence) t.recurrence = { type: "once" };
     if (!t.reads) t.reads = {};   // okundu bilgisi: { occKey: { userId: iso } }
@@ -501,6 +503,73 @@ function orgWorkers(owner) {
 }
 // Onay yetkisi ayarı ("yonetici" | "sef")
 function approvalSetting(key) { return (DB.approvals && DB.approvals[key]) || "yonetici"; }
+// --- Mesai saati (time clock) yardımcıları ---
+function clockOn() { return !!(DB.timeclock && DB.timeclock.enabled); }
+function clockNeedsLoc() { return !!(DB.timeclock && DB.timeclock.requireLocation); }
+function openClock(userId) { return (DB.clock || []).find((c) => c.userId === userId && !c.outAt) || null; }
+function clockHoursStr(ms) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  const h = Math.floor(m / 60);
+  return (h ? h + "s " : "") + (m % 60) + "dk";
+}
+function distMeters(a1, o1, a2, o2) {   // haversine (metre)
+  const R = 6371000, rad = (x) => x * Math.PI / 180;
+  const dLat = rad(a2 - a1), dLng = rad(o2 - o1);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a1)) * Math.cos(rad(a2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+const CLOCK_RADIUS_M = 200;   // mekâna en fazla bu kadar uzak olunabilir (m)
+function doClockIn(u) {
+  if (openClock(u.id)) return;
+  const venues = (u.venueIds || []).map(venueById).filter(Boolean);
+  const save = (venueId, lat, lng) => {
+    DB.clock.push({ id: uid(), ownerId: ownerIdOf(u), userId: u.id, venueId: venueId || null,
+      inAt: new Date().toISOString(), outAt: null, inLat: lat, inLng: lng });
+    saveDB(DB); render();
+  };
+  if (clockNeedsLoc()) {
+    if (!navigator.geolocation) { alert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const la = pos.coords.latitude, ln = pos.coords.longitude;
+      const withLoc = venues.filter((v) => v.lat != null);
+      if (withLoc.length) {
+        let best = null, bestD = Infinity;
+        withLoc.forEach((v) => { const d = distMeters(la, ln, v.lat, v.lng); if (d < bestD) { bestD = d; best = v; } });
+        if (bestD > CLOCK_RADIUS_M) { alert("Mekâna yakın değilsiniz (~" + Math.round(bestD) + " m). Mesaiye mekânda başlayın."); return; }
+        save(best.id, la, ln);
+      } else { save(venues[0] ? venues[0].id : null, la, ln); }  // mekan konumu ayarlı değil → yine de kaydet
+    }, () => { alert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+  } else {
+    save(venues[0] ? venues[0].id : null, null, null);
+  }
+}
+function doClockOut(u) {
+  const open = openClock(u.id);
+  if (!open) return;
+  open.outAt = new Date().toISOString();
+  saveDB(DB); render();
+}
+function clockCard(u) {
+  if (!clockOn() || u.role === "yonetici") return "";
+  const open = openClock(u.id);
+  if (open) {
+    const dur = clockHoursStr(Date.now() - new Date(open.inAt).getTime());
+    return `<div class="clock-card on">
+      <div class="clock-info">🟢 <strong>Mesaidesiniz</strong><span> · ${fmtDate(open.inAt)} (${dur})</span></div>
+      <button class="btn-danger" id="clock_out">🔴 Mesaiyi Bitir</button>
+    </div>`;
+  }
+  return `<div class="clock-card">
+    <div class="clock-info">⏱️ <strong>Mesai</strong></div>
+    <button class="btn-green" id="clock_in">🟢 Mesaiye Başla</button>
+  </div>`;
+}
+function wireClock(u) {
+  const i = document.getElementById("clock_in");
+  if (i) i.onclick = () => doClockIn(u);
+  const o = document.getElementById("clock_out");
+  if (o) o.onclick = () => doClockOut(u);
+}
 // u, belirtilen personelin izin talebini onaylayabilir mi?
 function canApproveLeave(u, staffId) {
   if (u.role === "yonetici") return true;
@@ -605,6 +674,7 @@ let histFrom = "", histTo = "";   // personel geçmiş tarih aralığı
 let dashFrom = "", dashTo = "";   // pano geciken görevler tarih aralığı
 let perfFrom = "", perfTo = "";   // performans tarih aralığı
 let repFrom = "", repTo = "";     // talepler tarih aralığı
+let mesaiFrom = "", mesaiTo = ""; // mesai kayıtları tarih aralığı
 let selectedVenue = null;         // yöneticinin açtığı mekan (kategori)
 let selectedChef = null;          // yöneticinin açtığı şef detayı
 let editingStaff = null;          // düzenlenen personel/şef id'si
@@ -778,6 +848,13 @@ function mountProfile(u) {
             <option value="sef"${approvalSetting("shift") === "sef" ? " selected" : ""}>Şefler de (kendi personeli)</option>
           </select></div>
         </div>` : ""}
+        ${u.role === "yonetici" ? `
+        <div class="field" style="border-top:1px solid var(--border);padding-top:12px">
+          <label>⏱️ Mesai Saati Takibi (giriş-çıkış)</label>
+          <label class="check-pill"><input type="checkbox" id="tc_enabled"${clockOn() ? " checked" : ""} /> Mesai saati takibini aç</label>
+          <label class="check-pill" style="margin-top:6px"><input type="checkbox" id="tc_loc"${clockNeedsLoc() ? " checked" : ""} /> Konum zorunlu (mekâna yakın olunmalı)</label>
+          <p style="color:var(--muted);font-size:12px;margin:6px 0 0">Konum zorunluysa her lokasyonun konumunu "Lokasyonlar"dan "📍 Konumu ayarla" ile kaydedin.</p>
+        </div>` : ""}
         <div class="form-actions">
           <button class="btn-primary" id="pf_save">Kaydet</button>
           <button class="btn-ghost" id="pf_cancel">İptal</button>
@@ -850,6 +927,14 @@ function mountProfile(u) {
         if (!DB.approvals) DB.approvals = {};
         DB.approvals.leave = apL.value;
         DB.approvals.shift = apS.value;
+      }
+      // Yönetici: mesai saati modülü
+      const tcE = document.getElementById("tc_enabled");
+      if (tcE) {
+        const tcL = document.getElementById("tc_loc");
+        if (!DB.timeclock) DB.timeclock = {};
+        DB.timeclock.enabled = tcE.checked;
+        DB.timeclock.requireLocation = tcL ? tcL.checked : false;
       }
       saveDB(DB);
       showProfile = false;
@@ -1242,6 +1327,8 @@ function renderManager(u) {
         { k: "izin", l: izinLabel },
         { k: "kayitlar", l: "Kayıtlar" },
       ];
+  // Mesai saati modülü açıksa "Mesai" sekmesini ekle
+  if (clockOn()) { tabs.push(["mesai", "Mesai"]); nav.push({ k: "mesai", l: "Mesai" }); }
 
   // şef olmayan bir sekme açılmışsa Bugün'e düş
   if (!tabs.some(([k]) => k === activeTab)) activeTab = "bugun";
@@ -1259,6 +1346,7 @@ function renderManager(u) {
   else if (activeTab === "paketler") body = packagesView(u);
   else if (activeTab === "leads") body = leadsView(u);
   else if (activeTab === "vardiya") body = shiftView(u);
+  else if (activeTab === "mesai") body = mesaiView(u);
   else body = mgrDashboard(u);
 
   app.innerHTML = topbar(u) + `
@@ -1282,6 +1370,8 @@ function renderManager(u) {
     ${editingTask ? taskEditModal(u) : ""}
   `;
   wireCommon();
+  wireClock(u);
+  if (activeTab === "mesai") wireRange("mesai", (v) => mesaiFrom = v, (v) => mesaiTo = v);
   document.querySelectorAll("[data-tab]").forEach((t) => {
     t.onclick = () => {
       activeTab = t.dataset.tab;
@@ -1590,6 +1680,7 @@ function mgrDashboard(u) {
       const first = esc((u.name || "").split(" ")[0] || "");
       return `<div class="dash-greet"><div class="dg-hi"><span>${g}</span>, ${first}!</div><div class="dg-date">📅 ${dateStr}</div></div>`;
     })()}
+    ${clockCard(u)}
     ${weekStarCard(all)}
     <div class="stats">
       ${statCard("Bugün Aktif", active.length, "blue", "🔄")}
@@ -2791,6 +2882,7 @@ function mgrVenues(u) {
           <div class="meta">${v.address ? esc(v.address) + " · " : ""}${cnt} personel · ${taskCnt} görev</div>
         </div>
         <div class="item-actions">
+          ${isOwner && clockOn() ? `<button class="btn-ghost btn-sm" data-venue-loc="${v.id}">${v.lat != null ? "📍 Konum ✓" : "📍 Konumu ayarla"}</button>` : ""}
           <span class="meta">Görevleri aç →</span>
           ${isOwner ? `<button class="btn-danger" data-del-venue="${v.id}">Sil</button>` : ""}
         </div>
@@ -2833,6 +2925,22 @@ function wireMgrVenues(u) {
   // mekana tıkla -> görevlerini aç
   document.querySelectorAll("[data-open-venue]").forEach((el) => {
     el.onclick = () => { selectedVenue = el.dataset.openVenue; render(); };
+  });
+
+  // Lokasyon konumunu ayarla (mesai konum kontrolü için "şu an buradayım")
+  document.querySelectorAll("[data-venue-loc]").forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const v = venueById(b.dataset.venueLoc);
+      if (!v) return;
+      if (!navigator.geolocation) { alert("Cihaz konum (GPS) desteklemiyor."); return; }
+      b.textContent = "…";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { v.lat = pos.coords.latitude; v.lng = pos.coords.longitude; saveDB(DB); render(); },
+        () => { alert("Konum alınamadı. Konum iznini verdiğinizden emin olun."); render(); },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    };
   });
 
   const addBtn = document.getElementById("v_add");
@@ -2924,6 +3032,58 @@ function mgrLog(u) {
       ${records.length ? (groupsHtml + noVHtml) : `<div class="empty">Henüz tamamlanmış görev yok.</div>`}
     </div>
   `;
+}
+
+/* --- Mesai Kayıtları (time clock) --- */
+function mesaiView(u) {
+  const owner = ownerIdOf(u);
+  const all = (DB.clock || []).filter((c) => c.ownerId === owner);
+  const myV = u.venueIds || [];
+  const scoped = (u.role === "yonetici") ? all : all.filter((c) => c.venueId && myV.includes(c.venueId));
+  const rows = scoped.filter((c) => inRange(c.inAt, mesaiFrom, mesaiTo)).slice().sort((a, b) => new Date(b.inAt) - new Date(a.inAt));
+  const openNow = rows.filter((c) => !c.outAt);
+
+  const rowHtml = (items) => `
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Personel</th><th>Giriş</th><th>Çıkış</th><th>Süre</th></tr></thead>
+      <tbody>${items.map((c) => {
+        const who = userById(c.userId);
+        const dur = c.outAt ? clockHoursStr(new Date(c.outAt) - new Date(c.inAt)) : "—";
+        return `<tr>
+          <td>${esc(who ? who.name : "Silinmiş")}</td>
+          <td class="when" style="white-space:nowrap">${fmtDate(c.inAt)}</td>
+          <td class="when" style="white-space:nowrap">${c.outAt ? fmtDate(c.outAt) : "🟢 Mesaide"}</td>
+          <td>${dur}</td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table></div>`;
+
+  const filtered = !!(mesaiFrom || mesaiTo);
+  const groupBody = (items) => {
+    const shown = filtered ? items : items.slice(0, 50);
+    const more = items.length - shown.length;
+    return rowHtml(shown) + (more > 0 ? `<div class="empty" style="padding:8px">Son 50 kayıt gösteriliyor · daha eskisi için tarih filtreleyin (+${more})</div>` : "");
+  };
+  const venues = visibleVenues(u);
+  const groupsHtml = venues.map((v) => {
+    const items = rows.filter((c) => c.venueId === v.id);
+    if (!items.length) return "";
+    return `<details class="cat" style="margin-bottom:10px" open><summary><span>📍 ${esc(v.name)} (${items.length})</span></summary><div class="cat-body" style="padding:10px">${groupBody(items)}</div></details>`;
+  }).join("");
+  const noV = rows.filter((c) => !c.venueId || !venueById(c.venueId));
+  const noVHtml = noV.length ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz (${noV.length})</span></summary><div class="cat-body" style="padding:10px">${groupBody(noV)}</div></details>` : "";
+
+  const onNowHtml = openNow.length ? `
+    <div class="reports-board"><div class="reports-head">🟢 Şu an mesaide (${openNow.length})</div>
+    ${openNow.map((c) => { const who = userById(c.userId); const v = c.venueId ? venueById(c.venueId) : null; return `<div class="completion-row"><span>${esc(who ? who.name : "?")}${v ? " · 📍 " + esc(v.name) : ""}</span><span class="ok">${fmtDate(c.inAt)} · ${clockHoursStr(Date.now() - new Date(c.inAt))}</span></div>`; }).join("")}
+    </div>` : "";
+
+  return rangeFilter("mesai", mesaiFrom, mesaiTo) + `
+    <div class="card">
+      <h2>⏱️ Mesai Kayıtları (${rows.length})</h2>
+      ${onNowHtml}
+      ${rows.length ? (groupsHtml + noVHtml) : `<div class="empty">Bu aralıkta mesai kaydı yok.</div>`}
+    </div>`;
 }
 
 /* --- Şefler sekmesi (yalnızca yönetici) --- */
@@ -3750,10 +3910,12 @@ function renderStaff(u) {
       <div class="tabs">
         ${tabs.map(([k, l]) => `<button class="tab ${staffTab === k ? "active" : ""}" data-stab="${k}">${l}</button>`).join("")}
       </div>
+      ${clockCard(u)}
       ${body}
     </div>
   `;
   wireCommon();
+  wireClock(u);
   document.querySelectorAll("[data-stab]").forEach((t) => {
     t.onclick = () => { staffTab = t.dataset.stab; render(); };
   });
