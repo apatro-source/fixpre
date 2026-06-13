@@ -412,6 +412,10 @@ function completionOf(t, key) { return t.completions[key] || null; }
 function doneForKey(t, key) {
   return t.assignedUserIds.length > 0 && !!t.completions[key];
 }
+// Tamamlanmış tek seferlik görev mi? (listede gizlenir ama DB'de kalır → kayıt/performans korunur)
+function isDoneOnce(t) {
+  return t.recurrence && t.recurrence.type === "once" && t.completions && !!t.completions["once"];
+}
 // Başlama saati geldi mi? (yoksa her zaman true). Öncesinde görev tamamlanamaz.
 function startReached(t) {
   if (!t.startTime || !/^\d{1,2}:\d{2}$/.test(t.startTime)) return true;
@@ -2313,7 +2317,8 @@ function venuePeopleGroups(u, people, renderItem, noVenueLabel) {
 function mgrTasks(u) {
   const candidates = assignableUsers(u);
   const venues = visibleVenues(u);
-  const tasks = visibleTasks(u).slice().reverse();
+  // Tamamlanmış tek seferlik görevler listede gözükmez (DB'de kalır → kayıt/performans korunur)
+  const tasks = visibleTasks(u).filter((t) => !isDoneOnce(t)).slice().reverse();
 
   const staffChecks = candidates.length
     ? candidates.map((s) => `
@@ -2851,14 +2856,22 @@ function mgrLog(u) {
     </table>
     </div>`;
   const venues = visibleVenues(u);
+  const filtered = !!(logFrom || logTo);   // tarih filtresi varsa hepsini göster, yoksa lokasyon başına 50
+  const groupBody = (items) => {
+    const shown = filtered ? items : items.slice(0, 50);
+    const more = items.length - shown.length;
+    return recTable(shown) + (more > 0
+      ? `<div class="empty" style="padding:8px">Son 50 kayıt gösteriliyor · daha eskisi için tarih filtreleyin (+${more})</div>`
+      : "");
+  };
   const groupsHtml = venues.map((v) => {
     const items = records.filter((r) => r.task.venueId === v.id);
     if (!items.length) return "";
-    return `<details class="cat" style="margin-bottom:10px"><summary><span>📍 ${esc(v.name)} (${items.length})</span></summary><div class="cat-body" style="padding:10px">${recTable(items)}</div></details>`;
+    return `<details class="cat" style="margin-bottom:10px"><summary><span>📍 ${esc(v.name)} (${items.length})</span></summary><div class="cat-body" style="padding:10px">${groupBody(items)}</div></details>`;
   }).join("");
   const noV = records.filter((r) => !r.task.venueId || !venueById(r.task.venueId));
   const noVHtml = noV.length
-    ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz (${noV.length})</span></summary><div class="cat-body" style="padding:10px">${recTable(noV)}</div></details>`
+    ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz (${noV.length})</span></summary><div class="cat-body" style="padding:10px">${groupBody(noV)}</div></details>`
     : "";
 
   return rangeFilter("log", logFrom, logTo) + `
