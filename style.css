@@ -571,6 +571,7 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .clock-card.on { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border-color: #6ee7b7; }
 .clock-info { font-size: 15px; font-weight: 800; color: #334155; }
 .clock-info span { font-weight: 600; color: var(--muted); }
+.clock-note { font-size: 12px; color: var(--muted); margin: -8px 0 14px; padding: 0 4px; line-height: 1.4; }
 .status-line.not-started { color: #4338ca; font-weight: 700; font-size: 13.5px; }
 .status-line { font-size: 13px; padding: 10px 0 4px; border-top: 1px solid var(--border); }
 

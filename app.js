@@ -522,25 +522,26 @@ const CLOCK_RADIUS_M = 100;   // mekâna en fazla bu kadar uzak olunabilir (m)
 function doClockIn(u) {
   if (openClock(u.id)) return;
   const venues = (u.venueIds || []).map(venueById).filter(Boolean);
-  const save = (venueId, lat, lng) => {
+  // KVKK/veri minimizasyonu: TAM KONUM SAKLANMAZ; yalnızca mekâna uzaklık (metre) tutulur.
+  const save = (venueId, distM) => {
     DB.clock.push({ id: uid(), ownerId: ownerIdOf(u), userId: u.id, venueId: venueId || null,
-      inAt: new Date().toISOString(), outAt: null, inLat: lat, inLng: lng });
+      inAt: new Date().toISOString(), outAt: null, distM: (distM == null ? null : Math.round(distM)) });
     saveDB(DB); render();
   };
   if (clockNeedsLoc()) {
     if (!navigator.geolocation) { alert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
-      const la = pos.coords.latitude, ln = pos.coords.longitude;
+      const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
       const withLoc = venues.filter((v) => v.lat != null);
       if (withLoc.length) {
         let best = null, bestD = Infinity;
         withLoc.forEach((v) => { const d = distMeters(la, ln, v.lat, v.lng); if (d < bestD) { bestD = d; best = v; } });
         if (bestD > CLOCK_RADIUS_M) { alert("Mekâna yakın değilsiniz (~" + Math.round(bestD) + " m). Mesaiye mekânda başlayın."); return; }
-        save(best.id, la, ln);
-      } else { save(venues[0] ? venues[0].id : null, la, ln); }  // mekan konumu ayarlı değil → yine de kaydet
+        save(best.id, bestD);
+      } else { save(venues[0] ? venues[0].id : null, null); }  // mekan konumu ayarlı değil → uzaklık yok
     }, () => { alert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
-    save(venues[0] ? venues[0].id : null, null, null);
+    save(venues[0] ? venues[0].id : null, null);
   }
 }
 function doClockOut(u) {
@@ -559,10 +560,13 @@ function clockCard(u) {
       <button class="btn-danger" id="clock_out">🔴 Mesaiyi Bitir</button>
     </div>`;
   }
+  const note = clockNeedsLoc()
+    ? `<p class="clock-note">📍 Konumunuz yalnızca giriş anında, mekânda olduğunuzu doğrulamak için kullanılır; sürekli takip yapılmaz.</p>`
+    : "";
   return `<div class="clock-card">
     <div class="clock-info">⏱️ <strong>Mesai</strong></div>
     <button class="btn-green" id="clock_in">🟢 Mesaiye Başla</button>
-  </div>`;
+  </div>${note}`;
 }
 function wireClock(u) {
   const i = document.getElementById("clock_in");
@@ -1012,6 +1016,7 @@ function renderLogin() {
     ["Hangi dilleri destekliyor?", "Türkçe, İngilizce, Almanca, Rusça, İspanyolca ve İtalyanca — herkes kendi dilinde kullanır."],
     ["Verilerim güvende mi?", "Şifreler şifrelenir, her işletmenin verisi birbirinden izoledir ve bulutta yedeklenir."],
     ["Görevlere son saat koyabilir miyim?", "Evet. Son saat belirlersiniz; bitmesine 1 saat kala ilgili personele otomatik uyarı gider."],
+    ["Personelin konumu sürekli takip ediliyor mu?", "Hayır. Konum yalnızca personel mesaiye giriş/çıkış yaparken, mekânda olduğunu doğrulamak için bir kez alınır — canlı veya sürekli takip yapılmaz. Tam konum saklanmaz; yalnızca mekâna yakın olup olmadığı kaydedilir. Bu özellik tamamen opsiyoneldir, işletme açıp kapatabilir."],
   ];
   app.innerHTML = `
     <div class="landing">
