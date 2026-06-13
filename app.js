@@ -518,7 +518,7 @@ function distMeters(a1, o1, a2, o2) {   // haversine (metre)
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a1)) * Math.cos(rad(a2)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-const CLOCK_RADIUS_M = 50;   // mekâna en fazla bu kadar uzak olunabilir (m)
+const CLOCK_RADIUS_M = 100;   // mekâna en fazla bu kadar uzak olunabilir (m)
 function doClockIn(u) {
   if (openClock(u.id)) return;
   const venues = (u.venueIds || []).map(venueById).filter(Boolean);
