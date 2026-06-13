@@ -339,8 +339,13 @@ function orgReports(o) { return DB.reports.filter((r) => r.ownerId === o); }
 // Bana gelen (çözebileceğim) bildirimler
 function incomingReports(u) {
   const all = orgReports(ownerIdOf(u));
-  if (u.role === "yonetici") return all;           // yönetici tüm org'u görür
-  if (u.role === "sef") return all.filter((r) => r.toUserId === u.id || r.target === "tumsef");
+  if (u.role === "yonetici") return all;           // yönetici tüm lokasyonlardaki talepleri görür
+  if (u.role === "sef") {
+    // Şef yalnızca SORUMLU olduğu lokasyondaki personel taleplerini görür.
+    // Şef talepleri sadece yöneticiye gider (diğer şefler görmez).
+    const myV = u.venueIds || [];
+    return all.filter((r) => r.target === "lokasyon" && r.venueId && myV.includes(r.venueId));
+  }
   return [];
 }
 
@@ -3201,25 +3206,17 @@ function reportCard(u, r, canResolve) {
 
 function reportCreateForm(u) {
   const cats = REPORT_CATS.map((c) => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join("");
-  let recipientField = "";
-  if (u.role === "personel") {
-    const chef = u.chefId ? userById(u.chefId) : null;
-    const chefCount = orgChefs(ownerIdOf(u)).length;
-    const opts = [];
-    if (chef) opts.push(`<option value="sef">Şefim (${esc(chef.name)})</option>`);
-    if (chefCount) opts.push(`<option value="tumsef">Tüm Şefler (vardiyadaki görsün)</option>`);
-    opts.push(`<option value="yonetici">Yönetici</option>`);
-    recipientField = `<div class="field"><label>Kime?</label><select id="rep_to">${opts.join("")}</select></div>`;
-  }
   const venues = venuesForUser(u);
-  const venueOpts = `<option value="">Mekan (opsiyonel)</option>` + venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
+  // Lokasyon ZORUNLU: tek lokasyon varsa otomatik seçili; birden çoksa "seçin" ister
+  const venueOpts = (venues.length === 1)
+    ? venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("")
+    : `<option value="">Lokasyon seçin</option>` + venues.map((v) => `<option value="${v.id}">${esc(v.name)}</option>`).join("");
   return `
     <div class="card">
       <h2>📨 Talep Gönder</h2>
       <div class="row">
         <div class="field"><label>Tür</label><select id="rep_cat">${cats}</select></div>
-        ${recipientField}
-        <div class="field"><label>Mekan</label><select id="rep_venue">${venueOpts}</select></div>
+        <div class="field"><label>Lokasyon</label><select id="rep_venue">${venueOpts}</select></div>
       </div>
       <div class="field"><label>Açıklama</label><textarea id="rep_text" placeholder="Ör: Mutfaktaki fırın arızalı / 5 kg deterjan lazım..."></textarea></div>
       <button class="btn-primary" id="rep_send">Gönder</button>
@@ -3278,17 +3275,15 @@ function wireReports(u) {
     const category = document.getElementById("rep_cat").value;
     const text = document.getElementById("rep_text").value.trim();
     const venueEl = document.getElementById("rep_venue");
-    const venueId = venueEl ? (venueEl.value || null) : null;
+    const venueId = venueEl ? venueEl.value : "";
     const err = document.getElementById("rep_err");
     if (!text) { err.textContent = "Lütfen açıklama yazın."; return; }
+    if (!venueId) { err.textContent = "Lütfen lokasyon seçin."; return; }   // mekan zorunlu
     let toUserId = null, target;
     if (u.role === "sef") {
-      target = "yonetici"; toUserId = ownerIdOf(u);  // şef -> yönetici
+      target = "yonetici"; toUserId = ownerIdOf(u);   // şef → yönetici (diğer şefler görmez)
     } else {
-      const to = document.getElementById("rep_to").value;
-      if (to === "sef" && u.chefId) { target = "sef"; toUserId = u.chefId; }
-      else if (to === "tumsef") { target = "tumsef"; toUserId = null; }
-      else { target = "yonetici"; toUserId = ownerIdOf(u); }
+      target = "lokasyon"; toUserId = null;            // personel → o lokasyonun şefleri + yönetici
     }
     DB.reports.push({
       id: uid(), ownerId: ownerIdOf(u), createdBy: u.id, toUserId, target,
@@ -3299,9 +3294,13 @@ function wireReports(u) {
     saveDB(DB);
     // ilgili kişilere bildirim
     let recips = [];
-    if (target === "sef") recips = [toUserId];
-    else if (target === "tumsef") recips = orgChefs(ownerIdOf(u)).map((c) => c.id);
-    else recips = [ownerIdOf(u)];
+    if (target === "lokasyon") {
+      // o lokasyonun sorumlu şefleri + yönetici
+      recips = orgChefs(ownerIdOf(u)).filter((c) => (c.venueIds || []).includes(venueId)).map((c) => c.id);
+      recips.push(ownerIdOf(u));
+    } else {
+      recips = [ownerIdOf(u)];   // şef talebi → yönetici
+    }
     notifyUsers(recips, "Yeni talep", text, "/");
     render();
   };

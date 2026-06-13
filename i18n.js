@@ -159,6 +159,8 @@ const I18N_ROWS = [
   ["Son 50 kayıt gösteriliyor · daha eskisi için tarih filtreleyin", "Showing latest 50 records · filter by date for older", "Letzte 50 Einträge · für ältere nach Datum filtern", "Показаны последние 50 записей · фильтруйте по дате для старых", "Mostrando los últimos 50 registros · filtra por fecha para ver más", "Ultimi 50 record · filtra per data per i più vecchi"],
   ["Oluşturan:", "Created by:", "Erstellt von:", "Создал:", "Creado por:", "Creato da:"],
   ["değiştirdi", "changed it", "hat geändert", "изменил", "lo modificó", "ha modificato"],
+  ["Lokasyon seçin", "Select location", "Standort wählen", "Выберите локацию", "Seleccione ubicación", "Seleziona sede"],
+  ["Lütfen lokasyon seçin.", "Please select a location.", "Bitte einen Standort wählen.", "Пожалуйста, выберите локацию.", "Por favor seleccione una ubicación.", "Seleziona una sede."],
   ["🎉 Harikasınız! Tüm görevler tamam!", "🎉 Amazing! All tasks done!", "🎉 Fantastisch! Alle Aufgaben erledigt!", "🎉 Великолепно! Все задачи выполнены!", "🎉 ¡Increíble! ¡Todas las tareas hechas!", "🎉 Fantastico! Tutte le attività fatte!"],
   ["✈️ Uçuşa geçtik — az kaldı!", "✈️ Taking off — almost there!", "✈️ Wir heben ab — fast geschafft!", "✈️ Взлетаем — почти готово!", "✈️ Despegando — ¡ya casi!", "✈️ Decollo — ci siamo quasi!"],
   ["🏃 Hareketlilik başladı!", "🏃 The momentum is on!", "🏃 Es kommt Bewegung rein!", "🏃 Пошло движение!", "🏃 ¡Esto se mueve!", "🏃 Si parte alla grande!"],
