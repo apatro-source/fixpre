@@ -510,7 +510,10 @@ function openClock(userId) { return (DB.clock || []).find((c) => c.userId === us
 function clockHoursStr(ms) {
   const m = Math.max(0, Math.round(ms / 60000));
   const h = Math.floor(m / 60);
-  return (h ? h + "s " : "") + (m % 60) + "dk";
+  const L = (typeof activeLang === "function") ? activeLang() : "tr";
+  const U = { tr: ["s", "dk"], en: ["h", "m"], de: ["Std", "Min"], ru: ["ч", "мин"], es: ["h", "m"], it: ["h", "m"] };
+  const [hU, mU] = U[L] || U.tr;
+  return (h ? h + hU + " " : "") + (m % 60) + mU;
 }
 function distMeters(a1, o1, a2, o2) {   // haversine (metre)
   const R = 6371000, rad = (x) => x * Math.PI / 180;
