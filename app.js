@@ -66,6 +66,17 @@ function migrate(db) {
   if (!db.approvals) db.approvals = { leave: "yonetici", shift: "yonetici" }; // onay yetkisi: "yonetici" | "sef"
   if (!db.clock) db.clock = [];       // mesai oturumları: { id, ownerId, userId, venueId, inAt, outAt, inLat, inLng, far }
   if (!db.timeclock) db.timeclock = { enabled: false, requireLocation: false }; // mesai saati modülü (opsiyonel)
+  // Onarım: aynı kullanıcıda birden fazla AÇIK oturum (yanlışlıkla çift "mesaiye başla") -> en erkenini tut, kopyaları sil
+  if (Array.isArray(db.clock)) {
+    const openSeen = new Set();
+    db.clock = db.clock.slice()
+      .sort((a, b) => new Date(a.inAt) - new Date(b.inAt))   // erken giriş önce
+      .filter((c) => {
+        if (c.outAt) return true;                 // kapalı kayıtlar korunur
+        if (openSeen.has(c.userId)) return false; // bu kullanıcının zaten açık oturumu var -> kopya, sil
+        openSeen.add(c.userId); return true;
+      });
+  }
   (db.tasks || []).forEach((t) => {
     if (!t.recurrence) t.recurrence = { type: "once" };
     if (!t.reads) t.reads = {};   // okundu bilgisi: { occKey: { userId: iso } }
@@ -554,50 +565,61 @@ function tAlert(s, suffix) {
   const msg = (typeof translateString === "function") ? translateString(s, L) : s;
   alert(msg + (suffix || ""));
 }
+let clockBusy = false;   // mesai giriş/çıkış işlemi sürerken (GPS bekleniyor) tekrar tetiklenmeyi önle
 function doClockIn(u) {
-  if (openClock(u.id)) return;
+  if (openClock(u.id) || clockBusy) return;   // zaten açık oturum varsa veya işlem sürüyorsa: çift kayıt yok
+  clockBusy = true;
+  const done = () => { clockBusy = false; };
   const venues = (u.venueIds || []).map(venueById).filter(Boolean);
   // KVKK/veri minimizasyonu: TAM KONUM SAKLANMAZ; yalnızca mekâna uzaklık (metre) tutulur.
   const save = (venueId, distM) => {
+    done();
+    if (openClock(u.id)) { render(); return; }   // yarış koruması: bu sırada açıldıysa ikinciyi EKLEME
     DB.clock.push({ id: uid(), ownerId: ownerIdOf(u), userId: u.id, venueId: venueId || null,
       inAt: new Date().toISOString(), outAt: null, distM: (distM == null ? null : Math.round(distM)) });
     saveDB(DB); render();
   };
   if (clockNeedsLoc()) {
-    if (!navigator.geolocation) { tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    if (!navigator.geolocation) { done(); tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
       const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
       const withLoc = venues.filter((v) => v.lat != null);
       if (withLoc.length) {
         let best = null, bestD = Infinity;
         withLoc.forEach((v) => { const d = distMeters(la, ln, v.lat, v.lng); if (d < bestD) { bestD = d; best = v; } });
-        if (bestD > CLOCK_RADIUS_M) { tAlert("Mekâna yakın değilsiniz. Mesaiye mekânda başlayın.", " (~" + Math.round(bestD) + " m)"); return; }
+        if (bestD > CLOCK_RADIUS_M) { done(); tAlert("Mekâna yakın değilsiniz. Mesaiye mekânda başlayın.", " (~" + Math.round(bestD) + " m)"); return; }
         save(best.id, bestD);
       } else { save(venues[0] ? venues[0].id : null, null); }  // mekan konumu ayarlı değil → uzaklık yok
-    }, () => { tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, () => { done(); tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
     save(venues[0] ? venues[0].id : null, null);
   }
 }
 function doClockOut(u) {
-  const open = openClock(u.id);
-  if (!open) return;
+  // Kullanıcının TÜM açık oturumlarını kapat (yanlışlıkla oluşmuş kopyaları da temizler)
+  const opens = (DB.clock || []).filter((c) => c.userId === u.id && !c.outAt);
+  if (!opens.length || clockBusy) return;
+  clockBusy = true;
+  const done = () => { clockBusy = false; };
   const finish = (distM) => {
-    open.outAt = new Date().toISOString();
-    open.outDistM = (distM == null ? null : Math.round(distM));
+    done();
+    const now = new Date().toISOString();
+    const dm = (distM == null ? null : Math.round(distM));
+    opens.forEach((o) => { o.outAt = now; o.outDistM = dm; });
     saveDB(DB); render();
   };
   if (clockNeedsLoc()) {
-    const v = open.venueId ? venueById(open.venueId) : null;
-    if (!navigator.geolocation) { tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    const o0 = opens[0];
+    const v = o0.venueId ? venueById(o0.venueId) : null;
+    if (!navigator.geolocation) { done(); tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
       const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
       if (v && v.lat != null) {
         const d = distMeters(la, ln, v.lat, v.lng);
-        if (d > CLOCK_RADIUS_M) { tAlert("Mekâna yakın değilsiniz. Mesaiyi mekânda bitirin.", " (~" + Math.round(d) + " m)"); return; }
+        if (d > CLOCK_RADIUS_M) { done(); tAlert("Mekâna yakın değilsiniz. Mesaiyi mekânda bitirin.", " (~" + Math.round(d) + " m)"); return; }
         finish(d);
       } else { finish(null); }
-    }, () => { tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, () => { done(); tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
     finish(null);
   }
@@ -3159,7 +3181,9 @@ function mesaiView(u) {
   const myV = u.venueIds || [];
   const scoped = (u.role === "yonetici") ? all : all.filter((c) => c.venueId && myV.includes(c.venueId));
   const rows = scoped.filter((c) => inRange(c.inAt, mesaiFrom, mesaiTo)).slice().sort((a, b) => new Date(b.inAt) - new Date(a.inAt));
-  const openNow = rows.filter((c) => !c.outAt);
+  // "Şu an mesaide": kişi başına TEK göster (yanlışlıkla oluşmuş kopya açık oturum iki kez görünmesin)
+  const seenOpen = new Set();
+  const openNow = rows.filter((c) => !c.outAt && !seenOpen.has(c.userId) && seenOpen.add(c.userId));
 
   const rowHtml = (items) => `
     <div style="overflow-x:auto"><table>
