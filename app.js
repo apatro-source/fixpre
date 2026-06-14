@@ -521,6 +521,12 @@ function distMeters(a1, o1, a2, o2) {   // haversine (metre)
 const CLOCK_RADIUS_M = 100;   // mekâna en fazla bu kadar uzak olunabilir (m)
 // KVKK aydınlatma metni (personele gösterilir; işletme kendi bilgisini ekleyebilir)
 const KVKK_NOTICE = "İşletmeniz, mesai giriş/çıkış kaydının doğruluğu ve işyerinde bulunduğunuzun teyidi amacıyla, yalnızca giriş/çıkış yaptığınız anda konumunuzu bir kez alır. Sürekli veya canlı konum takibi yapılmaz; tam konumunuz saklanmaz, yalnızca işyerine yakın olup olmadığınız kaydedilir. Bu veriler yalnızca işvereniniz tarafından görülür ve üçüncü kişilerle paylaşılmaz. İşleme, çalışma ilişkisinin yürütülmesi kapsamında yapılır (KVKK). Haklarınız için işvereninize başvurabilirsiniz. Bu özellik isteğe bağlıdır.";
+// Çeviri ile uyarı göster (statik metin çevrilir; suffix — örn. mesafe — aynen eklenir)
+function tAlert(s, suffix) {
+  const L = (typeof activeLang === "function") ? activeLang() : "tr";
+  const msg = (typeof translateString === "function") ? translateString(s, L) : s;
+  alert(msg + (suffix || ""));
+}
 function doClockIn(u) {
   if (openClock(u.id)) return;
   const venues = (u.venueIds || []).map(venueById).filter(Boolean);
@@ -531,17 +537,17 @@ function doClockIn(u) {
     saveDB(DB); render();
   };
   if (clockNeedsLoc()) {
-    if (!navigator.geolocation) { alert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    if (!navigator.geolocation) { tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
       const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
       const withLoc = venues.filter((v) => v.lat != null);
       if (withLoc.length) {
         let best = null, bestD = Infinity;
         withLoc.forEach((v) => { const d = distMeters(la, ln, v.lat, v.lng); if (d < bestD) { bestD = d; best = v; } });
-        if (bestD > CLOCK_RADIUS_M) { alert("Mekâna yakın değilsiniz (~" + Math.round(bestD) + " m). Mesaiye mekânda başlayın."); return; }
+        if (bestD > CLOCK_RADIUS_M) { tAlert("Mekâna yakın değilsiniz. Mesaiye mekânda başlayın.", " (~" + Math.round(bestD) + " m)"); return; }
         save(best.id, bestD);
       } else { save(venues[0] ? venues[0].id : null, null); }  // mekan konumu ayarlı değil → uzaklık yok
-    }, () => { alert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, () => { tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
     save(venues[0] ? venues[0].id : null, null);
   }
@@ -556,15 +562,15 @@ function doClockOut(u) {
   };
   if (clockNeedsLoc()) {
     const v = open.venueId ? venueById(open.venueId) : null;
-    if (!navigator.geolocation) { alert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
+    if (!navigator.geolocation) { tAlert("Konum gerekli ama cihaz GPS desteklemiyor."); return; }
     navigator.geolocation.getCurrentPosition((pos) => {
       const la = pos.coords.latitude, ln = pos.coords.longitude;   // anlık kullanılır, saklanmaz
       if (v && v.lat != null) {
         const d = distMeters(la, ln, v.lat, v.lng);
-        if (d > CLOCK_RADIUS_M) { alert("Mekâna yakın değilsiniz (~" + Math.round(d) + " m). Mesaiyi mekânda bitirin."); return; }
+        if (d > CLOCK_RADIUS_M) { tAlert("Mekâna yakın değilsiniz. Mesaiyi mekânda bitirin.", " (~" + Math.round(d) + " m)"); return; }
         finish(d);
       } else { finish(null); }
-    }, () => { alert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, () => { tAlert("Konum alınamadı. Konum iznini verin."); }, { enableHighAccuracy: true, timeout: 10000 });
   } else {
     finish(null);
   }
@@ -583,7 +589,7 @@ function clockCard(u) {
     ? `<details class="kvkk-note"><summary>📍 Konumunuz yalnızca giriş anında, mekânda olduğunuzu doğrulamak için kullanılır; sürekli takip yapılmaz.</summary><p>${KVKK_NOTICE}</p></details>`
     : "";
   return `<div class="clock-card">
-    <div class="clock-info">⏱️ <strong>Mesai</strong></div>
+    <div class="clock-info">⏱️ <strong>Mesai Saati</strong></div>
     <button class="btn-green" id="clock_in">🟢 Mesaiye Başla</button>
   </div>${note}`;
 }
@@ -1377,10 +1383,10 @@ function renderManager(u) {
       ];
   // Mesai saati modülü açıksa "Mesai" sekmesini ekle ("Daha Fazla" grubuna; yoksa üst seviye)
   if (clockOn()) {
-    tabs.push(["mesai", "Mesai"]);
+    tabs.push(["mesai", "Mesai Saati"]);
     const moreGrp = nav.find((x) => x.grp === "Daha Fazla");
-    if (moreGrp) moreGrp.items.push(["mesai", "Mesai"]);
-    else nav.push({ k: "mesai", l: "Mesai" });
+    if (moreGrp) moreGrp.items.push(["mesai", "Mesai Saati"]);
+    else nav.push({ k: "mesai", l: "Mesai Saati" });
   }
 
   // şef olmayan bir sekme açılmışsa Bugün'e düş
@@ -3018,11 +3024,11 @@ function wireMgrVenues(u) {
       e.stopPropagation();
       const v = venueById(b.dataset.venueLoc);
       if (!v) return;
-      if (!navigator.geolocation) { alert("Cihaz konum (GPS) desteklemiyor."); return; }
+      if (!navigator.geolocation) { tAlert("Cihaz konum (GPS) desteklemiyor."); return; }
       b.textContent = "…";
       navigator.geolocation.getCurrentPosition(
         (pos) => { v.lat = pos.coords.latitude; v.lng = pos.coords.longitude; saveDB(DB); render(); },
-        () => { alert("Konum alınamadı. Konum iznini verdiğinizden emin olun."); render(); },
+        () => { tAlert("Konum alınamadı. Konum iznini verdiğinizden emin olun."); render(); },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     };
@@ -3130,7 +3136,7 @@ function mesaiView(u) {
 
   const rowHtml = (items) => `
     <div style="overflow-x:auto"><table>
-      <thead><tr><th>Personel</th><th>Giriş</th><th>Çıkış</th><th>Süre</th></tr></thead>
+      <thead><tr><th>Personel</th><th>Giriş saati</th><th>Çıkış saati</th><th>Süre</th></tr></thead>
       <tbody>${items.map((c) => {
         const who = userById(c.userId);
         const dur = c.outAt ? clockHoursStr(new Date(c.outAt) - new Date(c.inAt)) : "—";
