@@ -550,6 +550,28 @@ function clockHoursStr(ms) {
   const [hU, mU] = U[L] || U.tr;
   return (h ? h + hU + " " : "") + (m % 60) + mU;
 }
+function hmToMin(s) { const p = String(s || "").split(":"); return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); }
+// Bir mesai oturumunun, o günkü vardiya planına göre fazla/eksik farkı.
+// Kapalı oturum + o güne tanımlı vardiya gerektirir; yoksa "—" döner.
+function shiftDiffBadge(c) {
+  if (!c.outAt) return "—";
+  const a = assignOf(c.userId, ymd(new Date(c.inAt)));
+  const def = (a && a.defId) ? defById(a.defId) : null;
+  if (!def || !def.start || !def.end) return "—";
+  const schedMin = hmToMin(def.end) - hmToMin(def.start);
+  if (schedMin <= 0) return "—";
+  const workedMin = Math.round((new Date(c.outAt) - new Date(c.inAt)) / 60000);
+  const diff = workedMin - schedMin;   // + fazla, − eksik
+  const L = (typeof activeLang === "function") ? activeLang() : "tr";
+  const W = { tr: ["fazla", "eksik", "tam"], en: ["over", "under", "exact"], de: ["mehr", "weniger", "genau"],
+    ru: ["сверх", "недо", "ровно"], es: ["de más", "de menos", "exacto"], it: ["in più", "in meno", "esatto"] };
+  const w = W[L] || W.tr;
+  if (diff === 0) return `<span class="bal bal-zero">${w[2]}</span>`;
+  const cls = diff > 0 ? "bal-green" : "bal-red";
+  const sign = diff > 0 ? "+" : "−";
+  const word = diff > 0 ? w[0] : w[1];
+  return `<span class="bal ${cls}">${sign}${clockHoursStr(Math.abs(diff) * 60000)} ${word}</span>`;
+}
 function distMeters(a1, o1, a2, o2) {   // haversine (metre)
   const R = 6371000, rad = (x) => x * Math.PI / 180;
   const dLat = rad(a2 - a1), dLng = rad(o2 - o1);
@@ -3203,7 +3225,7 @@ function mesaiView(u) {
 
   const rowHtml = (items) => `
     <div style="overflow-x:auto"><table>
-      <thead><tr><th>Personel</th><th>Giriş saati</th><th>Çıkış saati</th><th>Süre</th></tr></thead>
+      <thead><tr><th>Personel</th><th>Giriş saati</th><th>Çıkış saati</th><th>Süre</th><th>Vardiya farkı</th></tr></thead>
       <tbody>${items.map((c) => {
         const who = userById(c.userId);
         const dur = c.outAt ? clockHoursStr(new Date(c.outAt) - new Date(c.inAt)) : "—";
@@ -3212,6 +3234,7 @@ function mesaiView(u) {
           <td class="when" style="white-space:nowrap">${fmtDate(c.inAt)}</td>
           <td class="when" style="white-space:nowrap">${c.outAt ? fmtDate(c.outAt) + (c.mgrClosed ? ` <span class="tag creator">Yönetici bitirdi</span>` : "") : "🟢 Mesaide"}</td>
           <td>${dur}</td>
+          <td style="white-space:nowrap">${shiftDiffBadge(c)}</td>
         </tr>`;
       }).join("")}</tbody>
     </table></div>`;
