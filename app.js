@@ -805,6 +805,7 @@ let dashFrom = "", dashTo = "";   // pano geciken görevler tarih aralığı
 let perfFrom = "", perfTo = "";   // performans tarih aralığı
 let repFrom = "", repTo = "";     // talepler tarih aralığı
 let mesaiFrom = "", mesaiTo = ""; // mesai kayıtları tarih aralığı
+let showMesaiSummary = false;     // kişi bazlı özet açık mı (yalnızca yönetici)
 let selectedVenue = null;         // yöneticinin açtığı mekan (kategori)
 let selectedChef = null;          // yöneticinin açtığı şef detayı
 let editingStaff = null;          // düzenlenen personel/şef id'si
@@ -1540,6 +1541,8 @@ function renderManager(u) {
     if (mo) mo.onclick = () => { const [f, t] = monthRangeYmd(); mesaiFrom = f; mesaiTo = t; render(); };
     const al = document.querySelector("[data-mesai-all]");
     if (al) al.onclick = () => { mesaiFrom = ""; mesaiTo = ""; render(); };
+    const sumT = document.querySelector("[data-mesai-sumtoggle]");
+    if (sumT) sumT.onclick = () => { showMesaiSummary = !showMesaiSummary; render(); };
   }
   document.querySelectorAll("[data-tab]").forEach((t) => {
     t.onclick = () => {
@@ -3298,22 +3301,23 @@ function mesaiView(u) {
   const sumUsers = Object.keys(byUser).map((id) => ({ id, ...byUser[id] }))
     .sort((a, b) => ((userById(a.id) || {}).name || "").localeCompare((userById(b.id) || {}).name || ""));
   const periodBtns = `
-    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin:10px 0">
       <button class="btn-ghost btn-sm" data-mesai-week>Bu hafta</button>
       <button class="btn-ghost btn-sm" data-mesai-month>Bu ay</button>
       <button class="btn-ghost btn-sm" data-mesai-all>Tümü</button>
     </div>`;
-  const summaryHtml = `
-    <div class="card">
-      <h2>📊 Kişi bazlı özet</h2>
-      ${periodBtns}
+  // Kişi bazlı özet yalnızca YÖNETİCİ'ye görünür ve butonla açılır/kapanır
+  const summaryHtml = (u.role !== "yonetici") ? "" : `
+    <div class="card" style="padding:12px 14px">
+      <button class="btn-primary btn-sm" data-mesai-sumtoggle>📊 Kişi bazlı özet ${showMesaiSummary ? "▲" : "▼"}</button>
+      ${showMesaiSummary ? `${periodBtns}
       ${sumUsers.length ? sumUsers.map((s) => {
         const who = userById(s.id);
         return `<div class="completion-row">
           <span>${esc(who ? who.name : "?")} · ${s.days.size} ${dayW} · ${clockHoursStr(s.worked)}</span>
           <span>${s.hasDiff ? diffBadge(s.diff) : "—"}</span>
         </div>`;
-      }).join("") : `<div class="empty">Bu aralıkta tamamlanmış mesai yok.</div>`}
+      }).join("") : `<div class="empty">Bu aralıkta tamamlanmış mesai yok.</div>`}` : ""}
     </div>`;
 
   return rangeFilter("mesai", mesaiFrom, mesaiTo) + summaryHtml + `
