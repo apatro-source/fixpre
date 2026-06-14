@@ -4450,10 +4450,19 @@ async function cloudBootstrap() {
 
 // Başkalarının değişikliklerini periyodik çek (düzenleme sırasında dokunma)
 let pollStarted = false;
+let lastActivity = Date.now();      // son kullanıcı etkileşimi
+const IDLE_MS = 120000;             // 2 dk hiç dokunulmazsa poll'u durdur -> Neon uyur (maliyet düşer); dokununca anında devam
+// Kullanıcı etkileşimi: boştaysak hemen tazele, sayacı sıfırla
+function markActivity() {
+  const wasIdle = (Date.now() - lastActivity) > IDLE_MS;
+  lastActivity = Date.now();
+  if (wasIdle) pollOnce();   // boştan çıktı -> beklemeden güncel veriyi çek
+}
 // Tek seferlik kontrol — başkalarının değişikliğini çek (düzenleme/arka plan sırasında dokunma)
 async function pollOnce() {
   if (!authToken() || pushing || showProfile || showAnnounce || editingTask || editingStaff || sharingTask) return;
   if (document.hidden) return;   // sekme arka plandaysa istek atma (maliyet/pil tasarrufu)
+  if (Date.now() - lastActivity > IDLE_MS) return;   // kullanıcı boşta -> sorgu atma (Neon uyusun)
   const ae = document.activeElement;
   if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
   try {
@@ -4482,9 +4491,12 @@ async function pollOnce() {
 function startPolling() {
   if (pollStarted) return;          // birden fazla kez kurulmasın
   pollStarted = true;
-  setInterval(pollOnce, 25000);     // 25 sn — poll artık HAFİF (sürüm kontrolü) olduğu için sık ve ucuz
-  // Sekmeye geri dönünce anında tazele
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) pollOnce(); });
+  setInterval(pollOnce, 25000);     // 25 sn — poll HAFİF (sürüm kontrolü); ama yalnızca kullanıcı aktifken
+  // Kullanıcı etkileşimleri: aktiflik sayacını canlı tut, boştan çıkınca anında tazele
+  ["pointerdown", "keydown", "scroll", "touchstart"].forEach((ev) =>
+    document.addEventListener(ev, markActivity, { passive: true }));
+  // Sekmeye geri dönünce anında tazele (ve aktif say)
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { lastActivity = Date.now(); pollOnce(); } });
 }
 
 /* ---------------- Push bildirimleri ---------------- */
