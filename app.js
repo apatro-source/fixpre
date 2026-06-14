@@ -551,17 +551,20 @@ function clockHoursStr(ms) {
   return (h ? h + hU + " " : "") + (m % 60) + mU;
 }
 function hmToMin(s) { const p = String(s || "").split(":"); return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); }
-// Bir mesai oturumunun, o günkü vardiya planına göre fazla/eksik farkı.
-// Kapalı oturum + o güne tanımlı vardiya gerektirir; yoksa "—" döner.
-function shiftDiffBadge(c) {
-  if (!c.outAt) return "—";
+// Bir mesai oturumunun, o günkü vardiya planına göre fazla/eksik farkı (dakika).
+// Kapalı oturum + o güne tanımlı vardiya gerektirir; yoksa null döner.
+function shiftDiffMin(c) {
+  if (!c.outAt) return null;
   const a = assignOf(c.userId, ymd(new Date(c.inAt)));
   const def = (a && a.defId) ? defById(a.defId) : null;
-  if (!def || !def.start || !def.end) return "—";
+  if (!def || !def.start || !def.end) return null;
   const schedMin = hmToMin(def.end) - hmToMin(def.start);
-  if (schedMin <= 0) return "—";
+  if (schedMin <= 0) return null;
   const workedMin = Math.round((new Date(c.outAt) - new Date(c.inAt)) / 60000);
-  const diff = workedMin - schedMin;   // + fazla, − eksik
+  return workedMin - schedMin;   // + fazla, − eksik
+}
+// Fark dakikasını renkli rozet olarak biçimle (fazla/eksik/tam kelimeleri dile göre — i18n tablosundan bağımsız)
+function diffBadge(diff) {
   const L = (typeof activeLang === "function") ? activeLang() : "tr";
   const W = { tr: ["fazla", "eksik", "tam"], en: ["over", "under", "exact"], de: ["mehr", "weniger", "genau"],
     ru: ["сверх", "недо", "ровно"], es: ["de más", "de menos", "exacto"], it: ["in più", "in meno", "esatto"] };
@@ -569,8 +572,22 @@ function shiftDiffBadge(c) {
   if (diff === 0) return `<span class="bal bal-zero">${w[2]}</span>`;
   const cls = diff > 0 ? "bal-green" : "bal-red";
   const sign = diff > 0 ? "+" : "−";
-  const word = diff > 0 ? w[0] : w[1];
-  return `<span class="bal ${cls}">${sign}${clockHoursStr(Math.abs(diff) * 60000)} ${word}</span>`;
+  return `<span class="bal ${cls}">${sign}${clockHoursStr(Math.abs(diff) * 60000)} ${diff > 0 ? w[0] : w[1]}</span>`;
+}
+function shiftDiffBadge(c) {
+  const diff = shiftDiffMin(c);
+  return diff === null ? "—" : diffBadge(diff);
+}
+// "Bu hafta" (Pzt–Paz) ve "Bu ay" tarih aralıkları (ymd)
+function weekRangeYmd() {
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7;   // Pazartesi = 0
+  const mon = addDays(now, -day);
+  return [ymd(mon), ymd(addDays(mon, 6))];
+}
+function monthRangeYmd() {
+  const now = new Date();
+  return [ymd(new Date(now.getFullYear(), now.getMonth(), 1)), ymd(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
 }
 function distMeters(a1, o1, a2, o2) {   // haversine (metre)
   const R = 6371000, rad = (x) => x * Math.PI / 180;
@@ -1517,6 +1534,12 @@ function renderManager(u) {
   if (activeTab === "mesai") {
     wireRange("mesai", (v) => mesaiFrom = v, (v) => mesaiTo = v);
     document.querySelectorAll("[data-mgr-clockout]").forEach((b) => { b.onclick = () => mgrClockOut(b.dataset.mgrClockout, u); });
+    const wk = document.querySelector("[data-mesai-week]");
+    if (wk) wk.onclick = () => { const [f, t] = weekRangeYmd(); mesaiFrom = f; mesaiTo = t; render(); };
+    const mo = document.querySelector("[data-mesai-month]");
+    if (mo) mo.onclick = () => { const [f, t] = monthRangeYmd(); mesaiFrom = f; mesaiTo = t; render(); };
+    const al = document.querySelector("[data-mesai-all]");
+    if (al) al.onclick = () => { mesaiFrom = ""; mesaiTo = ""; render(); };
   }
   document.querySelectorAll("[data-tab]").forEach((t) => {
     t.onclick = () => {
@@ -3260,7 +3283,40 @@ function mesaiView(u) {
     ${openNow.map((c) => { const who = userById(c.userId); const v = c.venueId ? venueById(c.venueId) : null; return `<div class="completion-row"><span>${esc(who ? who.name : "?")}${v ? " · 📍 " + esc(v.name) : ""}</span><span class="ok">${fmtDate(c.inAt)} · ${clockHoursStr(Date.now() - new Date(c.inAt))}${canEndShift ? ` <button class="btn-danger btn-sm" data-mgr-clockout="${c.userId}" style="margin-left:8px">🔴 Mesaiyi Bitir</button>` : ""}</span></div>`; }).join("")}
     </div>` : "";
 
-  return rangeFilter("mesai", mesaiFrom, mesaiTo) + `
+  // Kişi bazlı özet (seçili tarih aralığına göre): toplam çalışma + net vardiya farkı
+  const byUser = {};
+  rows.forEach((c) => {
+    if (!c.outAt) return;
+    const a = byUser[c.userId] || (byUser[c.userId] = { worked: 0, diff: 0, hasDiff: false, days: new Set() });
+    a.worked += (new Date(c.outAt) - new Date(c.inAt));
+    a.days.add(ymd(new Date(c.inAt)));
+    const dm = shiftDiffMin(c);
+    if (dm !== null) { a.diff += dm; a.hasDiff = true; }
+  });
+  const L = (typeof activeLang === "function") ? activeLang() : "tr";
+  const dayW = { tr: "gün", en: "days", de: "Tage", ru: "дн.", es: "días", it: "giorni" }[L] || "gün";
+  const sumUsers = Object.keys(byUser).map((id) => ({ id, ...byUser[id] }))
+    .sort((a, b) => ((userById(a.id) || {}).name || "").localeCompare((userById(b.id) || {}).name || ""));
+  const periodBtns = `
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn-ghost btn-sm" data-mesai-week>Bu hafta</button>
+      <button class="btn-ghost btn-sm" data-mesai-month>Bu ay</button>
+      <button class="btn-ghost btn-sm" data-mesai-all>Tümü</button>
+    </div>`;
+  const summaryHtml = `
+    <div class="card">
+      <h2>📊 Kişi bazlı özet</h2>
+      ${periodBtns}
+      ${sumUsers.length ? sumUsers.map((s) => {
+        const who = userById(s.id);
+        return `<div class="completion-row">
+          <span>${esc(who ? who.name : "?")} · ${s.days.size} ${dayW} · ${clockHoursStr(s.worked)}</span>
+          <span>${s.hasDiff ? diffBadge(s.diff) : "—"}</span>
+        </div>`;
+      }).join("") : `<div class="empty">Bu aralıkta tamamlanmış mesai yok.</div>`}
+    </div>`;
+
+  return rangeFilter("mesai", mesaiFrom, mesaiTo) + summaryHtml + `
     <div class="card">
       <h2>⏱️ Mesai Kayıtları (${rows.length})</h2>
       ${onNowHtml}

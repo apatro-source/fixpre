@@ -1,5 +1,5 @@
 /* Fixpre Service Worker — uygulama kabuğunu önbelleğe alır, API'yi ağdan çeker */
-const CACHE = "fixpre-v50";
+const CACHE = "fixpre-v51";
 const ASSETS = [
   "/", "/index.html", "/app.js", "/style.css", "/i18n.js",
   "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png",
