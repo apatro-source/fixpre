@@ -329,6 +329,8 @@ label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px
 .lp-cta-ghost:hover { background: rgba(124,58,237,.06); }
 .lp-hero-mini { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 13.5px; font-weight: 600; color: #475569; }
 .lp-hero-mini span { white-space: nowrap; }
+.lp-trial { display: inline-block; margin-top: 14px; background: #ecfdf5; color: #047857; border: 1px solid #6ee7b7;
+  font-weight: 700; font-size: 13.5px; padding: 7px 15px; border-radius: 999px; }
 .lp-hero-art img { width: 100%; height: auto; border-radius: 20px; display: block;
   box-shadow: 0 30px 60px -20px rgba(99,102,241,.45); border: 1px solid rgba(255,255,255,.6); }
 

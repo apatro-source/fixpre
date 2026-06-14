@@ -1036,7 +1036,7 @@ function renderLogin() {
     ["Elif T.", "Market zinciri", "Çok şubemiz var; her lokasyonu ayrı yönetebiliyorum. Arayüz çok basit, personel hemen alıştı."],
   ];
   const faqs = [
-    ["Fixpre ücretsiz mi?", "Evet, demo sürümüyle tüm özellikleri ücretsiz kullanabilirsiniz. Ücretli paketler çok yakında."],
+    ["Fixpre ücretsiz mi?", "Evet, 7 gün boyunca tüm özellikleri ücretsiz deneyebilirsiniz; kredi kartı gerekmez. Ücretli paketler çok yakında."],
     ["Kurulum gerekiyor mu?", "Hayır. Tarayıcıdan girersiniz; isterseniz telefonunuza uygulama gibi ekleyebilirsiniz (PWA)."],
     ["Personelin telefonuna bildirim gider mi?", "Evet. Görev, talep ve duyurular; uygulama kapalıyken bile anlık bildirim olarak gider."],
     ["Birden fazla şubem var, yönetebilir miyim?", "Evet. Lokasyon bazlı düzen sayesinde her şubeyi, şefi ve personeli ayrı yönetirsiniz."],
@@ -1066,6 +1066,7 @@ function renderLogin() {
               <a href="#giris" class="btn-primary lp-cta">🚀 Ücretsiz Başla</a>
               <a href="#ozellikler" class="lp-cta-ghost">Nasıl çalışır?</a>
             </div>
+            <div class="lp-trial">🎁 7 gün ücretsiz deneme · kredi kartı gerekmez</div>
             <div class="lp-hero-mini"><span>✓ Kurulum yok</span><span>✓ Anlık bildirim</span><span>✓ 6 dil</span></div>
           </div>
           <div class="lp-hero-art">
@@ -1137,7 +1138,7 @@ function renderLogin() {
       <section class="lp-cta-band">
         <div class="lp-cta-inner">
           <h2>30 saniyede kur, bugün düzene gir.</h2>
-          <p>Kredi kartı yok, kurulum yok. Hemen ücretsiz dene.</p>
+          <p>7 gün ücretsiz · kredi kartı yok · kurulum yok.</p>
           <a href="#giris" class="btn-primary lp-cta lg">🚀 Ücretsiz Başla</a>
           <div class="lp-install" id="lp-install">
             <button class="lp-install-link" id="installBtn">📲 Ana ekrana ekle</button>
