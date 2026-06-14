@@ -108,8 +108,30 @@ function migrate(db) {
 let cloudEnabled = false;
 let cloudReady = false;   // ilk bulut verisi gelene kadar push YAPMA (eski veriyle üzerine yazma olmasın)
 let lastAppliedAt = null;
+let lastCloudDB = null;   // en son buluttan alınan/buluta yazılan veri (çakışmada yerel YENİ kayıtları korumak için temel)
 let pushTimer = null;
 let pushing = false;
+
+// Derin kopya (merge için temel anlık görüntüsü)
+function cloneDB(d) { try { return JSON.parse(JSON.stringify(d)); } catch (e) { return d; } }
+// Buluttan gelen veriyi benimserken, YEREL'de oluşturulup buluta henüz yazılmamış YENİ kayıtları
+// (duyuru, görev, talep, mesai vb.) kaybetme — onları gelen bulut verisine geri ekle.
+// "Yeni" = yerelde var, son bulut temelinde (lastCloudDB) yoktu ve gelen bulutta da yok.
+let mergeAddedCount = 0;   // son mergeLocalAdditions çağrısında geri eklenen yerel kayıt sayısı
+function mergeLocalAdditions(remote) {
+  mergeAddedCount = 0;
+  if (!lastCloudDB || !remote) return remote;
+  for (const k of Object.keys(DB)) {
+    const cur = DB[k], rem = remote[k], base = lastCloudDB[k];
+    if (!Array.isArray(cur) || !Array.isArray(rem) || !Array.isArray(base)) continue;
+    if (!cur.length || typeof cur[0] !== "object" || cur[0] == null || !("id" in cur[0])) continue;
+    const baseIds = new Set(base.map((x) => x && x.id));
+    const remIds = new Set(rem.map((x) => x && x.id));
+    const adds = cur.filter((x) => x && x.id != null && !baseIds.has(x.id) && !remIds.has(x.id));
+    if (adds.length) { remote[k] = rem.concat(adds); mergeAddedCount += adds.length; }
+  }
+  return remote;
+}
 
 let DB = loadDB();
 
@@ -175,6 +197,7 @@ async function doLogin(email, password) {
   DB = migrate(j.data || emptyDB());
   if (j.plan) orgPlan = j.plan;
   if (j.updatedAt != null) lastAppliedAt = j.updatedAt;   // sürüm kilidi için temel sürüm
+  lastCloudDB = cloneDB(DB);   // çakışma birleştirmesi için ilk bulut temeli
   // giriş ekranında seçilen dili kullanıcıya uygula (menü o dilde gelsin)
   const me = DB.users.find((x) => x.id === j.userId);
   if (me && me.lang !== guestLang()) { me.lang = guestLang(); saveDB(DB); }
@@ -189,6 +212,7 @@ async function doRegister(name, email, password, orgName) {
   DB = migrate(j.data || emptyDB());
   if (j.plan) orgPlan = j.plan;
   if (j.updatedAt != null) lastAppliedAt = j.updatedAt;   // sürüm kilidi için temel sürüm
+  lastCloudDB = cloneDB(DB);   // çakışma birleştirmesi için ilk bulut temeli
   saveLocal(DB);
   pushChecked = false;   // yeni hesap bu cihaza push için bağlansın
 }
@@ -4254,10 +4278,18 @@ function cloudPush(db) {
     try {
       const res = await dataPut(DB);   // ANLIK güncel veriyi gönder (eski snapshot değil)
       lastAppliedAt = res.updatedAt;
+      lastCloudDB = cloneDB(DB);       // başarıyla yazıldı -> yeni bulut temeli bu
     } catch (e) {
       if (e && e.conflict) {
-        // Bulutta daha yeni veri var -> ESKİYLE YAZMA. Bulutu benimse (veri kaybını önler).
-        if (e.data) { const _sy = window.scrollY; DB = migrate(e.data); saveLocal(DB); lastAppliedAt = e.updatedAt; render(); requestAnimationFrame(() => window.scrollTo(0, _sy)); }
+        // Bulutta daha yeni veri var. Bulutu benimse AMA yerelde yeni eklenenleri (duyuru/görev/talep...)
+        // koru ve birleşik veriyi tekrar buluta yaz — böylece az önce eklenen kayıt kaybolmaz.
+        if (e.data) {
+          const _sy = window.scrollY;
+          const merged = mergeLocalAdditions(migrate(e.data));
+          DB = merged; saveLocal(DB); lastAppliedAt = e.updatedAt; lastCloudDB = cloneDB(DB);
+          render(); requestAnimationFrame(() => window.scrollTo(0, _sy));
+          pushing = false; cloudPush(DB);   // birleşik sonucu (yeni kayıtlarla) buluta gönder
+        }
       }
       /* diğer hatalar: sessiz; localStorage yedeği var */
     }
@@ -4274,7 +4306,7 @@ async function cloudBootstrap() {
       if (res && res.plan) orgPlan = res.plan;
       if (res && res.data) {
         const _sy = window.scrollY;
-        DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt;
+        DB = migrate(res.data); saveLocal(DB); lastAppliedAt = res.updatedAt; lastCloudDB = cloneDB(DB);
         render();   // taze veri gelince arka planda yenile
         requestAnimationFrame(() => window.scrollTo(0, _sy));   // girişte üste atmasın
       }
@@ -4310,9 +4342,12 @@ async function pollOnce() {
       if (res && res.plan) orgPlan = res.plan;
       if (res && res.data) {
         const _sy = window.scrollY;        // arka plan güncellemesi: kullanıcının kaydırma yerini koru
-        DB = migrate(res.data);
+        DB = mergeLocalAdditions(migrate(res.data));   // yerelde yeni eklenenleri koru
+        const hadAdds = mergeAddedCount > 0;
         saveLocal(DB);
         lastAppliedAt = res.updatedAt;
+        lastCloudDB = cloneDB(DB);
+        if (hadAdds) cloudPush(DB);        // yerel yeni kayıt varsa birleşik veriyi buluta da yaz
         render();
         requestAnimationFrame(() => window.scrollTo(0, _sy));   // üste atmasın
       }
