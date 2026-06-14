@@ -715,6 +715,7 @@ function render() {
   const u = currentUser();
   if (!u) { renderLogin(); translateUI(); return; }
   window.onscroll = null;   // landing scroll efektini temizle
+  if (orgPlan && orgPlan.expired) { renderDemoLock(u); translateUI(); return; }   // demo doldu → işlem durur
   if (u.role === "yonetici" || u.role === "sef") renderManager(u);
   else renderStaff(u);
   if (showProfile) mountProfile(u);
@@ -1818,12 +1819,44 @@ function performanceData(owner, from, to) {
 // Plan süresi durumu (geri sayım / doldu) — banner için
 function planStatusBanner() {
   const pl = orgPlan || {};
-  if (pl.expired) return `<div class="plan-banner bad">⚠️ Paket süreniz doldu — Demo sürümdesiniz. Devam için ${SUPER_EMAIL} ile iletişime geçin.</div>`;
+  if (pl.expired) return `<div class="plan-banner bad">⏳ Demo süreniz doldu — devam etmek için ilgi talebi gönderin.</div>`;
   if (pl.daysLeft != null) {
     const warn = pl.daysLeft <= 7;
-    return `<div class="plan-banner ${warn ? "warn" : "ok"}">⏳ Paketinizin bitmesine ${pl.daysLeft} gün kaldı.${warn ? " Devam için iletişime geçin." : ""}</div>`;
+    return `<div class="plan-banner ${warn ? "warn" : "ok"}">⏳ Ücretsiz demo: ${pl.daysLeft} gün kaldı.</div>`;
   }
   return "";
+}
+
+// Demo süresi dolunca işlem durur; yönetici ilgi talebi gönderir, süper admin uzatınca açılır
+function renderDemoLock(u) {
+  const isMgr = u.role === "yonetici";
+  const owner = ownerIdOf(u);
+  const staff = orgStaff(owner).length, chefs = orgChefs(owner).length, venues = orgVenues(owner).length;
+  const leadForm = `
+    <div class="card">
+      <h2>📩 Devam etmek için ilgi talebi gönderin</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Talebinizi bırakın; size uygun planla en kısa sürede dönüş yapalım. Verileriniz güvende, silinmez.</p>
+      <div class="field"><label>E-posta</label><input id="lead_email" type="email" value="${esc(u.email || "")}" placeholder="ornek@firma.com" /></div>
+      <div class="row">
+        <div class="field"><label>Personel sayısı</label><input id="lead_staff" type="number" min="0" value="${staff}" /></div>
+        <div class="field"><label>Şef sayısı</label><input id="lead_chefs" type="number" min="0" value="${chefs}" /></div>
+        <div class="field"><label>Lokasyon sayısı</label><input id="lead_venues" type="number" min="0" value="${venues}" /></div>
+      </div>
+      <div class="field"><label>Not (opsiyonel)</label><textarea id="lead_note" placeholder="Eklemek istedikleriniz..."></textarea></div>
+      <button class="btn-primary" id="lead_send">Talebi Gönder</button>
+      <div class="error-msg" id="lead_msg"></div>
+    </div>`;
+  app.innerHTML = topbar(u) + `
+    <div class="container">
+      <div class="card lp-soon" style="text-align:center">
+        <div style="font-size:42px">⏳</div>
+        <h2 style="margin:6px 0">Demo süreniz doldu</h2>
+        <p style="color:var(--muted)">7 günlük ücretsiz demo sona erdi. ${isMgr ? "Devam etmek için aşağıdan ilgi talebi gönderin." : "Devam için işletme yöneticinizle görüşün."}</p>
+      </div>
+      ${isMgr ? leadForm : ""}
+    </div>`;
+  wireCommon();
+  if (isMgr) wirePackages(u);
 }
 
 function currentPackageKey() {
@@ -2811,7 +2844,7 @@ function wireMgrStaff(u) {
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
     if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
     if (!orgPlan.unlimited && orgStaff(ownerIdOf(u)).length >= orgPlan.maxStaff) {
-      err.textContent = `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için Paketler'den ilgi talebi gönderin.`;
       return;
     }
     addBtn.disabled = true; err.textContent = "";
@@ -2826,7 +2859,7 @@ function wireMgrStaff(u) {
     } catch (e) {
       addBtn.disabled = false;
       err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda."
-        : (String(e.message) === "limit_staff") ? `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`
+        : (String(e.message) === "limit_staff") ? `Demo planı: en fazla ${orgPlan.maxStaff} personel ekleyebilirsiniz. Daha fazlası için Paketler'den ilgi talebi gönderin.`
         : "Eklenemedi (bağlantı?).";
     }
   };
@@ -2993,7 +3026,7 @@ function wireMgrVenues(u) {
     const err = document.getElementById("v_err");
     if (!name) { err.textContent = "Lokasyon adı gerekli."; return; }
     if (!orgPlan.unlimited && orgVenues(ownerIdOf(u)).length >= orgPlan.maxVenues) {
-      err.textContent = `Demo planı: en fazla ${orgPlan.maxVenues} mekan ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxVenues} mekan ekleyebilirsiniz. Daha fazlası için Paketler'den ilgi talebi gönderin.`;
       return;
     }
     DB.venues.push({ id: uid(), name, address: addr, ownerId: ownerIdOf(u) });
@@ -3259,7 +3292,7 @@ function wireMgrChefs(u) {
     if (!name || !email || !pw) { err.textContent = "Ad, e-posta ve şifre gerekli."; return; }
     if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
     if (!orgPlan.unlimited && orgChefs(owner).length >= orgPlan.maxChefs) {
-      err.textContent = `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`;
+      err.textContent = `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için Paketler'den ilgi talebi gönderin.`;
       return;
     }
     addBtn.disabled = true; err.textContent = "";
@@ -3271,7 +3304,7 @@ function wireMgrChefs(u) {
     } catch (e) {
       addBtn.disabled = false;
       err.textContent = (String(e.message) === "email_taken") ? "Bu e-posta zaten kullanımda."
-        : (String(e.message) === "limit_chef") ? `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için ${SUPER_EMAIL} ile iletişime geçin.`
+        : (String(e.message) === "limit_chef") ? `Demo planı: en fazla ${orgPlan.maxChefs} şef ekleyebilirsiniz. Daha fazlası için Paketler'den ilgi talebi gönderin.`
         : "Eklenemedi (bağlantı?).";
     }
   };

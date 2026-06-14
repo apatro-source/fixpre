@@ -84,6 +84,11 @@ module.exports = async (req, res) => {
       };
       const ins = await sql`insert into org_state (org_id, data, updated_at) values (${orgId}, ${JSON.stringify(data)}::jsonb, now())
         returning (extract(epoch from updated_at)*1000)::bigint as ver`;
+      // 7 günlük ücretsiz demo süresi (sonunda işlem durur; süper admin setPlan ile uzatabilir)
+      const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 7);
+      await sql`insert into org_plans (org_id, max_venues, max_staff, max_chefs, unlimited, expires_at, updated_at)
+        values (${orgId}, ${DEFAULT_MAX_VENUES}, ${DEFAULT_MAX_STAFF}, ${DEFAULT_MAX_CHEFS}, false, ${trialEnd.toISOString()}, now())
+        on conflict (org_id) do nothing`;
       const plan = await getPlan(sql, orgId);
       res.status(200).json({ token: sign({ uid: userId, org: orgId, role: "yonetici" }), userId, data, plan, updatedAt: Number(ins[0].ver) });
       return;
