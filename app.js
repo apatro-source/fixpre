@@ -624,6 +624,19 @@ function doClockOut(u) {
     finish(null);
   }
 }
+// Yönetici/şef, personel unutsa bile onun mesaisini bitirir (konum kontrolü yok, "Yönetici bitirdi" notu eklenir)
+function mgrClockOut(userId, mgr) {
+  if (mgr.role !== "yonetici" && mgr.role !== "sef") return;
+  const opens = (DB.clock || []).filter((c) => c.userId === userId && !c.outAt);
+  if (!opens.length) return;
+  const who = userById(userId);
+  const ask = translateString("{name} adlı personelin mesaisini siz bitiriyorsunuz. Onaylıyor musunuz?", activeLang())
+    .replace("{name}", who ? who.name : "?");
+  if (!confirm(ask)) return;
+  const now = new Date().toISOString();
+  opens.forEach((o) => { o.outAt = now; o.outDistM = null; o.mgrClosed = true; o.closedBy = mgr.id; });
+  saveDB(DB); render();
+}
 function clockCard(u) {
   if (!clockOn() || u.role === "yonetici") return "";
   const open = openClock(u.id);
@@ -1479,7 +1492,10 @@ function renderManager(u) {
   `;
   wireCommon();
   wireClock(u);
-  if (activeTab === "mesai") wireRange("mesai", (v) => mesaiFrom = v, (v) => mesaiTo = v);
+  if (activeTab === "mesai") {
+    wireRange("mesai", (v) => mesaiFrom = v, (v) => mesaiTo = v);
+    document.querySelectorAll("[data-mgr-clockout]").forEach((b) => { b.onclick = () => mgrClockOut(b.dataset.mgrClockout, u); });
+  }
   document.querySelectorAll("[data-tab]").forEach((t) => {
     t.onclick = () => {
       activeTab = t.dataset.tab;
@@ -3194,7 +3210,7 @@ function mesaiView(u) {
         return `<tr>
           <td>${esc(who ? who.name : "Silinmiş")}</td>
           <td class="when" style="white-space:nowrap">${fmtDate(c.inAt)}</td>
-          <td class="when" style="white-space:nowrap">${c.outAt ? fmtDate(c.outAt) : "🟢 Mesaide"}</td>
+          <td class="when" style="white-space:nowrap">${c.outAt ? fmtDate(c.outAt) + (c.mgrClosed ? ` <span class="tag creator">Yönetici bitirdi</span>` : "") : "🟢 Mesaide"}</td>
           <td>${dur}</td>
         </tr>`;
       }).join("")}</tbody>
@@ -3215,9 +3231,10 @@ function mesaiView(u) {
   const noV = rows.filter((c) => !c.venueId || !venueById(c.venueId));
   const noVHtml = noV.length ? `<details class="cat" style="margin-bottom:10px"><summary><span>📋 Lokasyonsuz (${noV.length})</span></summary><div class="cat-body" style="padding:10px">${groupBody(noV)}</div></details>` : "";
 
+  const canEndShift = u.role === "yonetici" || u.role === "sef";
   const onNowHtml = openNow.length ? `
     <div class="reports-board"><div class="reports-head">🟢 Şu an mesaide (${openNow.length})</div>
-    ${openNow.map((c) => { const who = userById(c.userId); const v = c.venueId ? venueById(c.venueId) : null; return `<div class="completion-row"><span>${esc(who ? who.name : "?")}${v ? " · 📍 " + esc(v.name) : ""}</span><span class="ok">${fmtDate(c.inAt)} · ${clockHoursStr(Date.now() - new Date(c.inAt))}</span></div>`; }).join("")}
+    ${openNow.map((c) => { const who = userById(c.userId); const v = c.venueId ? venueById(c.venueId) : null; return `<div class="completion-row"><span>${esc(who ? who.name : "?")}${v ? " · 📍 " + esc(v.name) : ""}</span><span class="ok">${fmtDate(c.inAt)} · ${clockHoursStr(Date.now() - new Date(c.inAt))}${canEndShift ? ` <button class="btn-danger btn-sm" data-mgr-clockout="${c.userId}" style="margin-left:8px">🔴 Mesaiyi Bitir</button>` : ""}</span></div>`; }).join("")}
     </div>` : "";
 
   return rangeFilter("mesai", mesaiFrom, mesaiTo) + `
