@@ -182,8 +182,8 @@ async function doLogin(email, password) {
   pushChecked = false;   // bu cihazın push aboneliği yeni kullanıcıya bağlansın (yanlış kişiye bildirim gitmesin)
 }
 
-async function doRegister(name, email, password) {
-  const j = await authCall({ action: "register", name, email: (email || "").trim(), password });
+async function doRegister(name, email, password, orgName) {
+  const j = await authCall({ action: "register", name, email: (email || "").trim(), password, orgName: (orgName || "").trim() });
   localStorage.setItem(TOKEN_KEY, j.token);
   localStorage.setItem(UID_KEY, j.userId);
   DB = migrate(j.data || emptyDB());
@@ -836,6 +836,7 @@ function mountProfile(u) {
       <div class="modal">
         <h2>⚙️ Profil</h2>
         <div class="field"><label>Ad Soyad</label><input id="pf_name" value="${esc(u.name)}" /></div>
+        ${u.role === "yonetici" ? `<div class="field"><label>İşletme adı</label><input id="pf_orgname" value="${esc(DB.orgName || "")}" /></div>` : ""}
         <div class="field"><label>Dil / Language</label><select id="pf_lang">${langOpts}</select></div>
         <div class="field"><label>Yeni Şifre (boş bırakırsanız değişmez)</label><input id="pf_pw" type="text" placeholder="••••" /></div>
         <div class="field"><label>Yeni Şifre (tekrar)</label><input id="pf_pw2" type="text" /></div>
@@ -944,6 +945,8 @@ function mountProfile(u) {
       if (pw) { await authCall({ action: "setPassword", password: pw }); } // kendi şifresi
       u.name = name;
       u.lang = lang;
+      const orgEl = document.getElementById("pf_orgname");
+      if (orgEl) DB.orgName = orgEl.value.trim();   // işletme adı (yönetici)
       localStorage.setItem("fixpre_lang", lang); // cihaz dili de güncel kalsın
       // Yönetici: onay yetkileri
       const apL = document.getElementById("ap_leave");
@@ -986,6 +989,10 @@ function renderLogin() {
         <button class="btn-primary" id="loginBtn">Giriş Yap</button>
       ` : `
         <p class="auth-note">Yönetici olarak kayıt olun. Şeflerinizi ve personelinizi giriş yaptıktan sonra siz eklersiniz.</p>
+        <div class="field">
+          <label>İşletme adı</label>
+          <input id="r_orgname" placeholder="Örn: Mola Kafe" />
+        </div>
         <div class="field">
           <label>Ad Soyad</label>
           <input id="r_name" placeholder="Adınız Soyadınız" />
@@ -1238,18 +1245,19 @@ function renderLogin() {
     });
   } else {
     const tryRegister = async () => {
+      const orgName = document.getElementById("r_orgname").value.trim();
       const name = document.getElementById("r_name").value.trim();
       const email = document.getElementById("r_email").value.trim();
       const pw = document.getElementById("r_pw").value;
       const pw2 = document.getElementById("r_pw2").value;
       const err = document.getElementById("loginErr");
-      if (!name || !email || !pw) { err.textContent = "Lütfen tüm alanları doldurun."; return; }
+      if (!orgName || !name || !email || !pw) { err.textContent = "Lütfen tüm alanları doldurun."; return; }
       if (pw.length < 4) { err.textContent = "Şifre en az 4 karakter olmalı."; return; }
       if (pw !== pw2) { err.textContent = "Şifreler uyuşmuyor."; return; }
       const btn = document.getElementById("registerBtn");
       err.textContent = ""; btn.disabled = true;
       try {
-        await doRegister(name, email, pw);
+        await doRegister(name, email, pw, orgName);
         const me = currentUser();
         if (me) { me.lang = guestLang(); saveDB(DB); } // seçilen dili uygula (varsayılan İngilizce)
         activeTab = "bugun"; staffTab = "bugun";
@@ -1905,7 +1913,7 @@ function wirePackages(u) {
     btn.disabled = true; msg.style.color = ""; msg.textContent = "";
     try {
       await leadSubmit({
-        email, name: u.name,
+        email, name: u.name, business: DB.orgName || "",
         staff: parseInt(document.getElementById("lead_staff").value, 10) || 0,
         chefs: parseInt(document.getElementById("lead_chefs").value, 10) || 0,
         venues: parseInt(document.getElementById("lead_venues").value, 10) || 0,
@@ -1937,7 +1945,7 @@ function wireLeadsView(u) {
     list.innerHTML = leads.length ? leads.map((l) => `
       <div class="list-item">
         <div>
-          <div class="title">${esc(l.email)}${l.name ? " · " + esc(l.name) : ""}</div>
+          <div class="title">${l.business ? "🏢 " + esc(l.business) + " — " : ""}${esc(l.email)}${l.name ? " · " + esc(l.name) : ""}</div>
           <div class="meta">👥 ${l.staff} personel · 👔 ${l.chefs} şef · 📍 ${l.venues} lokasyon${l.note ? " · " + esc(l.note) : ""}</div>
           <div class="meta">${fmtDate(l.created_at)}</div>
         </div>

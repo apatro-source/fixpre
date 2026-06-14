@@ -71,6 +71,7 @@ module.exports = async (req, res) => {
       const name = (body.name || "").trim();
       const email = (body.email || "").trim().toLowerCase();
       const password = body.password || "";
+      const orgName = (body.orgName || "").trim();
       if (!name || !email || !password) { res.status(400).json({ error: "missing" }); return; }
       const ex = await sql`select 1 from accounts where email = ${email}`;
       if (ex.length) { res.status(409).json({ error: "email_taken" }); return; }
@@ -79,6 +80,7 @@ module.exports = async (req, res) => {
       const hash = await bcrypt.hash(password, 10);
       await sql`insert into accounts (id, org_id, email, password_hash, role) values (${userId}, ${orgId}, ${email}, ${hash}, 'yonetici')`;
       const data = {
+        orgName,
         users: [{ id: userId, role: "yonetici", name, email, ownerId: orgId, managerId: null, venueIds: [], lang: "en" }],
         venues: [], tasks: [], reports: [], undoLog: [], leaves: [], announcements: [],
       };
